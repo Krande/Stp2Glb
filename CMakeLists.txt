@@ -58,11 +58,11 @@ set(HEADERS src/cadit/occt/step_to_glb.h)
 
 add_executable(STP2GLB ${SOURCES} ${HEADERS})
 
-set(BUILD_SHARED_LIBS OFF)
+#set(BUILD_SHARED_LIBS OFF)
 #set(CMAKE_EXE_LINKER_FLAGS "/static")
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
-target_compile_options(STP2GLB PUBLIC /MT)
-target_link_options(STP2GLB PUBLIC /INCREMENTAL:NO /NODEFAULTLIB:MSVCRT)
+#set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
+#target_compile_options(STP2GLB PUBLIC /MT)
+#target_link_options(STP2GLB PUBLIC /INCREMENTAL:NO /NODEFAULTLIB:MSVCRT)
 
 set_target_properties(STP2GLB PROPERTIES
         INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/bin")
