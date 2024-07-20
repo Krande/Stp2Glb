@@ -13,7 +13,7 @@
         "LIBRARY_PREFIX": "$env{PREFIX}/Library"
       },
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelwithDebInfo",
+        "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_PREFIX_PATH": "$env{LIBRARY_PREFIX};$env{LIBRARY_PREFIX}/include;$env{LIBRARY_PREFIX}/lib;$env{LIBRARY_PREFIX}/bin",
         "CMAKE_INSTALL_PREFIX": "$env{LIBRARY_PREFIX}",
         "CGAL_DIR": "$env{LIBRARY_PREFIX}/lib/cmake/CGAL",
