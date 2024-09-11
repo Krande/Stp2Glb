@@ -13,15 +13,12 @@
         "LIBRARY_PREFIX": "$env{PREFIX}/Library"
       },
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_PREFIX_PATH": "$env{LIBRARY_PREFIX};$env{LIBRARY_PREFIX}/include;$env{LIBRARY_PREFIX}/lib;$env{LIBRARY_PREFIX}/bin",
         "CMAKE_INSTALL_PREFIX": "$env{LIBRARY_PREFIX}",
         "CGAL_DIR": "$env{LIBRARY_PREFIX}/lib/cmake/CGAL",
         "OpenCASCADE_DIR": "$env{LIBRARY_PREFIX}/lib/cmake/opencascade",
         "OpenCASCADE_INCLUDE_DIR": "$env{LIBRARY_PREFIX}/include/opencascade",
-        "Python_EXECUTABLE": "$env{PREFIX}/python.exe",
-        "Python_LIBRARIES": "$env{PREFIX}/libs/python311.lib",
-        "Python_INCLUDE_DIRS": "$env{LIBRARY_PREFIX}/include",
         "BUILD_TESTING": "ON",
         "CONDA_LOCAL_DEV": "ON"
       }
