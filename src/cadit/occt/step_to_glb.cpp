@@ -7,6 +7,15 @@
 #include <filesystem>
 #include <XCAFDoc_ShapeTool.hxx>
 #include <utility>
+#include <StepData_StepModel.hxx>
+#include <Interface_EntityIterator.hxx>
+#include <StepShape_SolidModel.hxx>
+#include <StepShape_Face.hxx>
+#include <StepShape_AdvancedFace.hxx>
+#include <StepRepr_RepresentationItem.hxx>
+#include <BRepBuilderAPI_MakeShape.hxx>
+#include <BRep_Builder.hxx>
+#include <iostream>
 
 class TimingContext {
 public:
@@ -58,37 +67,90 @@ void stp_to_glb(const std::string& stp_file,
 
     auto num_roots = reader.NbRootsForTransfer();
     std::cout << "Number of roots for transfer: " << num_roots << "\n";
+    auto default_reader = reader.ChangeReader();
 
-    // Transfer to a document
+    auto model = default_reader.StepModel();
+    auto iterator = model->Entities();
+    auto num_entities = iterator.NbEntities();
+    std::cout << "Number of entities: " << num_entities << "\n";
     const Handle(TDocStd_Document) doc = new TDocStd_Document("MDTV-XCAF");
+    // Get the root label of the document
+    TDF_Label label = doc->Main();
+    Handle(XCAFDoc_ShapeTool) shape_tool = XCAFDoc_DocumentTool::ShapeTool(label);
+    // Use the iterator to get all shape entities
+    while (iterator.More())
     {
-        TIME_BLOCK("Transferring data to document");
+        auto entity = iterator.Value();
+        const Handle(Standard_Type) type = entity->DynamicType();
 
-        if (!reader.Transfer(doc))
-            throw std::runtime_error("Error transferring data to document");
-    }
-
-    // Tessellation
-    const Handle(XCAFDoc_ShapeTool) shapeTool = XCAFDoc_DocumentTool::ShapeTool(doc->Main());
-    TDF_LabelSequence labelSeq;
-    shapeTool->GetShapes(labelSeq);
-
-    IMeshTools_Parameters meshParams;
-    meshParams.Angle = angularDeflection;
-    meshParams.Deflection = linearDeflection;
-    meshParams.Relative = relativeDeflection;
-    meshParams.MinSize = 0.1;
-    meshParams.AngleInterior = 0.5;
-    meshParams.DeflectionInterior = 0.1;
-
-    {
-        TIME_BLOCK("Tessellation of shapes");
-        for (Standard_Integer i = 1; i <= labelSeq.Length(); ++i)
+        // Check if the entity is a solid model
+        if (entity->IsKind(STANDARD_TYPE(StepShape_SolidModel)))
         {
-            TopoDS_Shape shape = XCAFDoc_ShapeTool::GetShape(labelSeq.Value(i));
-            std::cout << "Tessellating shape " << i << " of " << labelSeq.Length() << "\n";
-            auto mesh = BRepMesh_IncrementalMesh(shape, meshParams);
+            // Safely cast the entity to StepGeom_SolidModel
+            Handle(StepShape_SolidModel) solid_model = Handle(StepShape_SolidModel)::DownCast(entity);
+
+            if (!solid_model.IsNull()) {
+                // Convert the solid model into an OpenCascade shape
+                if (!default_reader.TransferEntity(solid_model))
+                {
+                    std::cerr << "Error transferring entity" << std::endl;
+                };
+                TopoDS_Shape shape = default_reader.Shape(default_reader.NbShapes());
+
+                // Apply the location (transformation) to the shape
+                TopLoc_Location loc = shape.Location();
+                if (!loc.IsIdentity())
+                {
+                    shape.Location(loc);  // Apply the transformation
+                }
+                // Perform tessellation (discretization) on the shape
+                BRepMesh_IncrementalMesh mesh(shape, 0.1);  // Adjust 0.1 for finer/coarser tessellation
+                // Add the TopoDS_Shape to the document
+                TDF_Label shape_label = shape_tool->AddShape(shape);
+                if (!shape_label.IsNull())
+                {
+                    std::cout << "Shape added to the document successfully!" << std::endl;
+                }
+                else
+                {
+                    std::cerr << "Failed to add shape to the document." << std::endl;
+                }
+            }
         }
+        // Check if the entity is a face (StepShape_AdvancedFace or StepShape_Face)
+        if (entity->IsKind(STANDARD_TYPE(StepShape_AdvancedFace)) || entity->IsKind(STANDARD_TYPE(StepShape_Face)))
+        {
+            Handle(StepShape_Face) face = Handle(StepShape_Face)::DownCast(entity);
+
+            if (!face.IsNull())
+            {
+                if (!default_reader.TransferEntity(face))
+                {
+                    std::cerr << "Error transferring face entity" << std::endl;
+                }
+                TopoDS_Shape face_shape = default_reader.Shape(default_reader.NbShapes());
+
+                // Apply the location (transformation) to the shape
+                TopLoc_Location loc = face_shape.Location();
+                if (!loc.IsIdentity())
+                {
+                    face_shape.Location(loc);  // Apply the transformation
+                }
+
+                BRepMesh_IncrementalMesh mesh(face_shape, 0.1);
+                TDF_Label face_label = shape_tool->AddShape(face_shape);
+                if (!face_label.IsNull())
+                {
+                    std::cout << "Face added to the document successfully!" << std::endl;
+                }
+                else
+                {
+                    std::cerr << "Failed to add face to the document." << std::endl;
+                }
+            }
+        }
+        iterator.Next();
+
     }
 
     // Write to GLB
