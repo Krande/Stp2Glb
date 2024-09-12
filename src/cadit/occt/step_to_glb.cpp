@@ -128,10 +128,11 @@ void stp_to_glb(const std::string& stp_file,
                 {
                     std::cerr << "Error transferring face entity" << std::endl;
                 }
-                TopoDS_Shape face_shape = default_reader.Shape(default_reader.NbShapes());
+                auto nb_shapes = default_reader.NbShapes();
+                TopoDS_Shape face_shape = default_reader.Shape(nb_shapes);
 
                 // Apply the location (transformation) to the shape
-                TopLoc_Location loc = face_shape.Location();
+                TopLoc_Location loc = face_shape.Location().Transformation();
                 if (!loc.IsIdentity())
                 {
                     face_shape.Location(loc);  // Apply the transformation
