@@ -53,6 +53,9 @@ include(cmake/deps_occ.cmake)
 include(cmake/deps_ifc.cmake)
 include(cmake/deps_stepcode.cmake)
 
+add_definitions(-DWIN32_LEAN_AND_MEAN)
+add_definitions(-DNOMINMAX)
+
 # Install the C++ executable
 set(SOURCES
         src/main.cpp

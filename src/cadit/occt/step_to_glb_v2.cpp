@@ -17,6 +17,7 @@
 #include <TDataStd_Name.hxx>
 #include <iostream>
 #include "step_to_glb_v2.h"
+#include <Interface_Static.hxx>
 
 class TimingContext
 {
@@ -183,7 +184,7 @@ void stp_to_glb_v2(const std::string& stp_file,
 {
     // Initialize the STEPCAFControl_Reader
     STEPCAFControl_Reader reader;
-
+    Interface_Static::SetIVal ("FromSTEP.FixShape.FixShellOrientationMode", 0);
     // Set reader parameters
     StepData_ConfParameters params;
     params.ReadProps = false;
@@ -208,14 +209,13 @@ void stp_to_glb_v2(const std::string& stp_file,
     meshParams.InParallel = Standard_True;
     meshParams.AllowQualityDecrease = Standard_True;
 
-
     {
         TIME_BLOCK("Reading STEP file");
 
         if (reader.ReadFile(stp_file.c_str(), params) != IFSelect_RetDone)
             throw std::runtime_error("Error reading STEP file");
     }
-
+    Interface_Static::SetIVal ("FromSTEP.FixShape.FixShellOrientationMode", 0);
     const Handle(TDocStd_Document) doc = new TDocStd_Document("MDTV-XCAF");
     TDF_Label label = doc->Main();
     Handle(XCAFDoc_ShapeTool) shape_tool = XCAFDoc_DocumentTool::ShapeTool(label);
