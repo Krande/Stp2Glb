@@ -51,10 +51,21 @@ set(ADA_CPP_LINK_LIBS)
 include(cmake/deps_cgal.cmake)
 include(cmake/deps_occ.cmake)
 include(cmake/deps_ifc.cmake)
+include(cmake/deps_stepcode.cmake)
 
 # Install the C++ executable
-set(SOURCES src/main.cpp src/cadit/occt/step_to_glb.cpp)
-set(HEADERS src/cadit/occt/step_to_glb.h)
+set(SOURCES
+        src/main.cpp
+        src/cadit/occt/step_to_glb_v2.cpp
+        src/cadit/stepcode/sc_parser.cpp
+        src/cadit/stepcode/sc_parser.h
+        src/cadit/occt/step_to_glb_v1.cpp
+)
+set(HEADERS
+        src/cadit/occt/step_to_glb_v1.h
+        src/cadit/occt/step_to_glb_v2.h
+        src/cadit/stepcode/sc_parser.h
+)
 
 add_executable(STP2GLB ${SOURCES} ${HEADERS})
 

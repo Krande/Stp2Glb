@@ -19,6 +19,7 @@
         "CGAL_DIR": "$env{LIBRARY_PREFIX}/lib/cmake/CGAL",
         "OpenCASCADE_DIR": "$env{LIBRARY_PREFIX}/lib/cmake/opencascade",
         "OpenCASCADE_INCLUDE_DIR": "$env{LIBRARY_PREFIX}/include/opencascade",
+        "STEPCODE_INCLUDE_DIR": "$env{LIBRARY_PREFIX}/include/stepcode",
         "BUILD_TESTING": "ON",
         "CONDA_LOCAL_DEV": "ON"
       }
