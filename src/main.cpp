@@ -10,6 +10,7 @@
 #include "cadit/occt/step_to_glb_v2.h"
 #include "cadit/occt/step_to_glb_v1.h"
 #include "cadit/stepcode/sc_parser.h"
+#include "cadit/occt/bsplinesurf.h"
 
 
 int main(int argc, char *argv[]) {
@@ -19,7 +20,7 @@ int main(int argc, char *argv[]) {
     app.add_option("--lin-defl", "Linear deflection")->default_val(0.1)->check(CLI::Range(0.0, 1.0));
     app.add_option("--ang-defl", "Angular deflection")->default_val(0.5)->check(CLI::Range(0.0, 1.0));
     app.add_flag("--rel-defl", "Relative deflection");
-    app.add_option("--version", "Version of the converter")->default_val(1)->check(CLI::Range(1, 3));
+    app.add_option("--version", "Version of the converter")->default_val(1)->check(CLI::Range(0, 3));
     CLI11_PARSE(app, argc, argv);
 
     const auto stp_file = app.get_option("--stp")->results()[0];
@@ -29,10 +30,13 @@ int main(int argc, char *argv[]) {
     const auto rel_defl = app.get_option("--rel-defl")->as<bool>();
     const auto version = app.get_option("--version")->as<int>();
 
-    try {
 
+
+    try {
         const auto start = std::chrono::high_resolution_clock::now();
-        if (version == 1)
+        if (version == 0)
+            make_a_bspline_surf(stp_file);
+        else if (version == 1)
             stp_to_glb_v1(stp_file, glb_file, lin_defl, ang_defl, rel_defl);
         else if (version == 2)
             stp_to_glb_v2(stp_file, glb_file, lin_defl, ang_defl, rel_defl);

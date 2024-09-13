@@ -63,11 +63,13 @@ set(SOURCES
         src/cadit/stepcode/sc_parser.cpp
         src/cadit/stepcode/sc_parser.h
         src/cadit/occt/step_to_glb_v1.cpp
+        src/cadit/occt/bsplinesurf.cpp
 )
 set(HEADERS
         src/cadit/occt/step_to_glb_v1.h
         src/cadit/occt/step_to_glb_v2.h
         src/cadit/stepcode/sc_parser.h
+        src/cadit/occt/bsplinesurf.h
 )
 
 add_executable(STP2GLB ${SOURCES} ${HEADERS})

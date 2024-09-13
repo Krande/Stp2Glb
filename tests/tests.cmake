@@ -1,3 +1,10 @@
+add_test(NAME stp_glb_cli_bspline_surf_test COMMAND STP2GLB
+        --stp ${CMAKE_CURRENT_SOURCE_DIR}/temp/output.stp
+        --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/flat_plate_abaqus_10x10_m_wColors.glb
+        --version 0
+        WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/bin"
+)
+
 add_test(NAME stp_glb_cli_flat_plate_v1 COMMAND STP2GLB
         --stp ${CMAKE_CURRENT_SOURCE_DIR}/files/flat_plate_abaqus_10x10_m_wColors.stp
         --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/flat_plate_abaqus_10x10_m_wColors.glb
