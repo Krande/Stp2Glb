@@ -17,7 +17,10 @@
 #include <TDataStd_Name.hxx>
 #include <iostream>
 #include "step_to_glb_v2.h"
+#include "step_writer.h"
 #include <Interface_Static.hxx>
+
+
 
 class TimingContext
 {
@@ -147,18 +150,19 @@ bool add_shape_to_document(const TopoDS_Shape& shape, const std::string& name,
     return false;
 }
 
-bool entity_to_shape(const Handle(Standard_Transient)& entity,
+TopoDS_Shape entity_to_shape(const Handle(Standard_Transient)& entity,
                      STEPControl_Reader default_reader,
                      const Handle(XCAFDoc_ShapeTool)& shape_tool,
                      IMeshTools_Parameters& meshParams)
 {
     const Handle(Standard_Type) type = entity->DynamicType();
     bool added_to_model = false;
+    TopoDS_Shape shape;
     // Check if the entity is a solid model
     if (entity->IsKind(STANDARD_TYPE(StepShape_SolidModel)))
     {
         Handle(StepShape_SolidModel) solid_model = Handle(StepShape_SolidModel)::DownCast(entity);
-        auto shape = make_shape(solid_model, default_reader);
+        shape = make_shape(solid_model, default_reader);
         auto name = get_name(solid_model);
         if (add_shape_to_document(shape, name, shape_tool, meshParams))
             added_to_model = true;
@@ -168,12 +172,12 @@ bool entity_to_shape(const Handle(Standard_Transient)& entity,
         STANDARD_TYPE(StepShape_Face)))
     {
         Handle(StepShape_Face) face = Handle(StepShape_Face)::DownCast(entity);
-        auto shape = make_shape(face, default_reader);
+        shape = make_shape(face, default_reader);
         auto name = get_name(face);
         if (add_shape_to_document(shape, name, shape_tool, meshParams))
             added_to_model = true;
     }
-    return added_to_model;
+    return shape;
 }
 
 void stp_to_glb_v2(const std::string& stp_file,
@@ -185,6 +189,8 @@ void stp_to_glb_v2(const std::string& stp_file,
     // Initialize the STEPCAFControl_Reader
     STEPCAFControl_Reader reader;
     Interface_Static::SetIVal ("FromSTEP.FixShape.FixShellOrientationMode", 0);
+    Interface_Static::SetIVal("read.step.shape.repair.mode", 0);
+    Interface_Static::SetIVal("read.precision.mode", 0);
     // Set reader parameters
     StepData_ConfParameters params;
     params.ReadProps = false;
@@ -233,10 +239,15 @@ void stp_to_glb_v2(const std::string& stp_file,
     auto curr_shape = 0;
 
     // Use the iterator to get all shape entities
+    AdaCPPStepWriter stp_writer;
     while (iterator.More())
     {
-        if (entity_to_shape(iterator.Value(), default_reader, shape_tool, meshParams))
+        auto const entity = iterator.Value();
+        auto shape =entity_to_shape(entity, default_reader, shape_tool, meshParams);
+        if (!shape.IsNull())
         {
+            auto color = random_color();
+            stp_writer.add_shape(shape, "test", color);
             curr_shape++;
             if (curr_shape >= max_shape)
             {
@@ -271,4 +282,6 @@ void stp_to_glb_v2(const std::string& stp_file,
             throw std::runtime_error("Error writing GLB file");
         }
     }
+
+    stp_writer.export_step("demo.stp");
 }

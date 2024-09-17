@@ -13,8 +13,8 @@
 #include <TDF_Label.hxx>
 #include <XCAFDoc_ColorTool.hxx>
 #include <XCAFDoc_ShapeTool.hxx>
-#include "../../binding_core.h"
-#include "../../helpers/helpers.h"
+#include "helpers.h"
+#include "../../geom/Color.h"
 
 
 
@@ -28,7 +28,7 @@ public:
         // The shape tool
         shape_tool_ = XCAFDoc_DocumentTool::ShapeTool(doc_->Main());
         // Set auto naming to false
-        shape_tool_->SetAutoNaming(false);
+        XCAFDoc_ShapeTool::SetAutoNaming(false);
 
         // The color tool
         color_tool_ = XCAFDoc_DocumentTool::ColorTool(doc_->Main());
@@ -41,7 +41,7 @@ public:
     }
 
     void add_shape(const TopoDS_Shape &shape, const std::string &name,
-                   Color &rgb_color,
+                   Color rgb_color,
                    const TDF_Label &parent = TDF_Label()) {
         comp_builder_.Add(comp_, shape);
         TDF_Label parent_label = parent.IsNull() ? tll_ : parent;
@@ -111,11 +111,4 @@ void write_box_to_step(const std::string &filename, const std::vector<float> &bo
     STEPControl_Writer writer;
     writer.Transfer(aBox, STEPControl_AsIs);
     writer.Write(filename.c_str());
-}
-
-void step_writer_module(nb::module_ &m) {
-    m.def("write_box_to_step", &write_box_to_step, "filename"_a, "box_origin"_a, "box_dims"_a,
-          "Write a box to a step file");
-    m.def("write_boxes_to_step", &write_boxes_to_step, "filename"_a, "box_origins"_a, "box_dims"_a,
-          "Write a list of boxes to a step file");
 }

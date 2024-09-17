@@ -15,7 +15,7 @@ include(cmake/pre_checks.cmake)
 # Create a list called ADA_CPP_SOURCES of all cpp files inside the src dir
 set(ADA_CPP_SOURCES
         src/cadit/ifc/ifcop.cpp
-        src/helpers/helpers.cpp
+        src/cadit/occt/helpers.cpp
         src/geom/Models.cpp
         src/geom/geometries.cpp
         src/cadit/occt/step_to_glb.cpp
@@ -31,7 +31,7 @@ set(ADA_CPP_SOURCES
 )
 set(ADA_CPP_HEADERS
         src/cadit/ifc/ifcop.h
-        src/helpers/helpers.h
+        src/cadit/occt/helpers.h
         src/geom/geometries.h
         src/cadit/occt/occt_convert.h
         src/cadit/occt/step_to_glb.h
@@ -64,12 +64,17 @@ set(SOURCES
         src/cadit/stepcode/sc_parser.h
         src/cadit/occt/step_to_glb_v1.cpp
         src/cadit/occt/bsplinesurf.cpp
+        src/cadit/occt/helpers.cpp
+        src/cadit/occt/step_writer.cpp
 )
 set(HEADERS
         src/cadit/occt/step_to_glb_v1.h
         src/cadit/occt/step_to_glb_v2.h
         src/cadit/stepcode/sc_parser.h
         src/cadit/occt/bsplinesurf.h
+        src/cadit/occt/helpers.h
+        src/cadit/occt/step_writer.h
+        src/geom/Color.h
 )
 
 add_executable(STP2GLB ${SOURCES} ${HEADERS})
