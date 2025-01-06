@@ -1,16 +1,13 @@
 {
   "version": 6,
-  "include": [
-    ".env.json"
-  ],
   "configurePresets": [
     {
       "name": "win-local",
-      "inherits": ["env-vars"],
       "generator": "Ninja",
       "hidden": false,
       "environment": {
-        "LIBRARY_PREFIX": "$env{PREFIX}/Library"
+        "PREFIX": "${sourceDir}/.pixi/envs/local-win",
+        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/local-win/Library"
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
