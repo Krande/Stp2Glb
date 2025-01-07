@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(stp2glb LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 OPTION(CONDA_LOCAL_DEV "Install into activate local development conda env." OFF)
 
@@ -19,7 +19,7 @@ set(ADA_CPP_SOURCES
         src/geom/Models.cpp
         src/geom/geometries.cpp
         src/cadit/occt/step_to_glb.cpp
-        src/cadit/occt/occt_convert.cpp
+        src/cadit/occt/step_helpers.cpp
         src/cadit/occt/step_writer.cpp
         src/cadit/occt/gltf_writer.cpp
         src/cadit/occt/colors.cpp
@@ -33,8 +33,9 @@ set(ADA_CPP_HEADERS
         src/cadit/ifc/ifcop.h
         src/cadit/occt/helpers.h
         src/geom/geometries.h
-        src/cadit/occt/occt_convert.h
+        src/geom/Color.h
         src/cadit/occt/step_to_glb.h
+        src/cadit/occt/step_helpers.h
         src/cadit/occt/step_writer.h
         src/cadit/occt/gltf_writer.h
         src/cadit/occt/colors.h
@@ -59,22 +60,27 @@ add_definitions(-DNOMINMAX)
 # Install the C++ executable
 set(SOURCES
         src/main.cpp
+        src/geom/Color.cpp
         src/cadit/occt/step_to_glb_v2.cpp
         src/cadit/stepcode/sc_parser.cpp
-        src/cadit/stepcode/sc_parser.h
+        src/cadit/occt/gltf_writer.cpp
         src/cadit/occt/step_to_glb_v1.cpp
+        src/cadit/occt/step_helpers.cpp
         src/cadit/occt/bsplinesurf.cpp
         src/cadit/occt/helpers.cpp
         src/cadit/occt/step_writer.cpp
 )
 set(HEADERS
+        src/config_structs.h
+        src/geom/Color.h
         src/cadit/occt/step_to_glb_v1.h
         src/cadit/occt/step_to_glb_v2.h
+        src/cadit/occt/step_helpers.h
+        src/cadit/occt/gltf_writer.h
         src/cadit/stepcode/sc_parser.h
         src/cadit/occt/bsplinesurf.h
         src/cadit/occt/helpers.h
         src/cadit/occt/step_writer.h
-        src/geom/Color.h
 )
 
 add_executable(STP2GLB ${SOURCES} ${HEADERS})

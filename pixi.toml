@@ -23,6 +23,6 @@ cmake = "3.29.2"
 numpy = "*"
 cgal-cpp = "5.6.1"
 cli11 = "*"
-tinygltf = "2.8.19" # This must be installed in target dir also if you want to compile
+tinygltf = "2.8.19"
 python = "3.12"
 tbb-devel = "*"

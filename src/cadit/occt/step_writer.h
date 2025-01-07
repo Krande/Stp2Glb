@@ -22,9 +22,8 @@ class AdaCPPStepWriter {
 public:
     explicit AdaCPPStepWriter(const std::string& top_level_name = "Assembly");
 
-    void add_shape(const TopoDS_Shape& shape, const std::string& name,
-                   Color& rgb_color,
-                   const TDF_Label& parent = TDF_Label());
+    void add_shape(const TopoDS_Shape &shape, const std::string &name, Color &rgb_color,
+        const TDF_Label &parent = TDF_Label());
 
     void export_step(const std::filesystem::path& step_file);
 

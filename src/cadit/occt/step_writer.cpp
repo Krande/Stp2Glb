@@ -41,8 +41,8 @@ public:
     }
 
     void add_shape(const TopoDS_Shape &shape, const std::string &name,
-                   Color rgb_color,
-                   const TDF_Label &parent = TDF_Label()) {
+                   Color &rgb_color,
+                   const TDF_Label &parent= TDF_Label()) {
         comp_builder_.Add(comp_, shape);
         TDF_Label parent_label = parent.IsNull() ? tll_ : parent;
         TDF_Label shape_label = shape_tool_->AddSubShape(parent_label, shape);

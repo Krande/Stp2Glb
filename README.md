@@ -5,7 +5,7 @@
 First install the pre-requisites for occt and build requirements from conda-forge.
 
 ```bash
-mamba env update -f environment.build.yml --prune
+pixi install
 ```
 
 ### Local IDE development

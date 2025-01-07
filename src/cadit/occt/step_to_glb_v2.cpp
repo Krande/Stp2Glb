@@ -6,191 +6,28 @@
 #include <execution>
 #include <filesystem>
 #include <XCAFDoc_ShapeTool.hxx>
-#include <utility>
 #include <StepData_StepModel.hxx>
 #include <Interface_EntityIterator.hxx>
-#include <StepShape_SolidModel.hxx>
-#include <StepShape_Face.hxx>
-#include <StepShape_AdvancedFace.hxx>
 #include <BRepBuilderAPI_MakeShape.hxx>
-#include <BRep_Builder.hxx>
-#include <TDataStd_Name.hxx>
 #include <iostream>
 #include "step_to_glb_v2.h"
 #include "step_writer.h"
 #include <Interface_Static.hxx>
+#include <Interface_Graph.hxx>
+
+#include "gltf_writer.h"
+#include "step_helpers.h"
+#include "../../config_structs.h"
 
 
-
-class TimingContext
-{
-public:
-    explicit TimingContext(std::string name)
-        : label(std::move(name)), start(std::chrono::high_resolution_clock::now())
-    {
-        std::cout << "Starting: " << label << std::endl;
-    }
-
-    ~TimingContext()
-    {
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration<double>(stop - start).count();
-        std::cout << label << " took " << std::fixed << std::setprecision(2)
-            << duration << " seconds." << std::endl;
-    }
-
-private:
-    std::string label;
-    std::chrono::time_point<std::chrono::high_resolution_clock> start;
-};
-
-#define TIME_BLOCK(name) TimingContext timer_##__LINE__(name)
-
-void update_location(TopoDS_Shape& shape)
-{
-    TopLoc_Location loc = shape.Location();
-    // Extract translation components from the transformation matrix
-    gp_XYZ translation = loc.Transformation().TranslationPart();
-    Standard_Real x = translation.X();
-    Standard_Real y = translation.Y();
-    Standard_Real z = translation.Z();
-
-    // Output the coordinates
-    std::cout << "X: " << x << ", Y: " << y << ", Z: " << z << "\n";
-
-    if (!loc.IsIdentity())
-    {
-        shape.Location(loc); // Apply the transformation
-    }
-}
-
-std::string get_name(const Handle(StepRepr_RepresentationItem)& repr_item)
-{
-    if (!repr_item.IsNull())
-    {
-        auto name = repr_item->Name()->ToCString();
-
-        if (name)
-        {
-            return name;
-        }
-        return "Unnamed";
-    }
-    return {};
-}
-
-TopoDS_Shape make_shape(const Handle(StepShape_SolidModel)& solid_model, STEPControl_Reader& reader)
-{
-    if (!solid_model.IsNull())
-    {
-        TIME_BLOCK("Transferring solid model entity");
-        // Convert the solid model into an OpenCascade shape
-        if (!reader.TransferEntity(solid_model))
-        {
-            std::cerr << "Error transferring entity" << std::endl;
-        };
-        TopoDS_Shape shape = reader.Shape(reader.NbShapes());
-
-        // Apply the location (transformation) to the shape
-        update_location(shape);
-        return shape;
-    }
-    return {};
-}
-
-TopoDS_Shape make_shape(const Handle(StepShape_Face)& face, STEPControl_Reader& reader)
-{
-    if (!face.IsNull())
-    {
-        TIME_BLOCK("Transferring face entity");
-        if (!reader.TransferEntity(face))
-        {
-            std::cerr << "Error transferring face entity" << std::endl;
-        }
-
-        TopoDS_Shape shape = reader.Shape(reader.NbShapes());
-
-
-        // Apply the location (transformation) to the shape
-        update_location(shape);
-        return shape;
-    }
-    return {};
-}
-
-bool add_shape_to_document(const TopoDS_Shape& shape, const std::string& name,
-                           const Handle(XCAFDoc_ShapeTool)& shape_tool, IMeshTools_Parameters& meshParams)
-{
-    if (!shape.IsNull())
-    {
-        {
-            TIME_BLOCK("Applying tessellation");
-            // Perform tessellation (discretization) on the shape
-            BRepMesh_IncrementalMesh mesh(shape, meshParams); // Adjust 0.1 for finer/coarser tessellation
-        }
-
-        // Add the TopoDS_Shape to the document
-        {
-            TIME_BLOCK("Adding shape '" + name + "' to document\n");
-            TDF_Label shape_label = shape_tool->AddShape(shape);
-            TDataStd_Name::Set(shape_label, name.c_str());
-
-            if (!shape_label.IsNull())
-            {
-                std::cout << "Shape added to the document successfully!" << std::endl;
-                return true;
-            }
-            else
-            {
-                std::cerr << "Failed to add shape to the document." << std::endl;
-                return false;
-            }
-        }
-    }
-    return false;
-}
-
-TopoDS_Shape entity_to_shape(const Handle(Standard_Transient)& entity,
-                     STEPControl_Reader default_reader,
-                     const Handle(XCAFDoc_ShapeTool)& shape_tool,
-                     IMeshTools_Parameters& meshParams)
-{
-    const Handle(Standard_Type) type = entity->DynamicType();
-    bool added_to_model = false;
-    TopoDS_Shape shape;
-    // Check if the entity is a solid model
-    if (entity->IsKind(STANDARD_TYPE(StepShape_SolidModel)))
-    {
-        Handle(StepShape_SolidModel) solid_model = Handle(StepShape_SolidModel)::DownCast(entity);
-        shape = make_shape(solid_model, default_reader);
-        auto name = get_name(solid_model);
-        if (add_shape_to_document(shape, name, shape_tool, meshParams))
-            added_to_model = true;
-    }
-    // Check if the entity is a face (StepShape_AdvancedFace or StepShape_Face)
-    if (entity->IsKind(STANDARD_TYPE(StepShape_AdvancedFace)) || entity->IsKind(
-        STANDARD_TYPE(StepShape_Face)))
-    {
-        Handle(StepShape_Face) face = Handle(StepShape_Face)::DownCast(entity);
-        shape = make_shape(face, default_reader);
-        auto name = get_name(face);
-        if (add_shape_to_document(shape, name, shape_tool, meshParams))
-            added_to_model = true;
-    }
-    return shape;
-}
-
-void stp_to_glb_v2(const std::string& stp_file,
-                   const std::string& glb_file,
-                   const double linearDeflection,
-                   const double angularDeflection,
-                   const bool relativeDeflection)
+void stp_to_glb_v2(const GlobalConfig& config)
 {
     // Initialize the STEPCAFControl_Reader
     STEPCAFControl_Reader reader;
     Interface_Static::SetIVal ("FromSTEP.FixShape.FixShellOrientationMode", 0);
     Interface_Static::SetIVal("read.step.shape.repair.mode", 0);
     Interface_Static::SetIVal("read.precision.mode", 0);
+
     // Set reader parameters
     StepData_ConfParameters params;
     params.ReadProps = false;
@@ -198,6 +35,8 @@ void stp_to_glb_v2(const std::string& stp_file,
     params.ReadLayer = true;
     params.ReadAllShapes = true;
     params.ReadName = true;
+    params.ReadSubshapeNames = true;
+    params.ReadResourceName = true;
     params.ReadColor = true;
     params.ReadPrecisionMode = StepData_ConfParameters::ReadMode_Precision_User;
     params.ReadPrecisionVal = 1;
@@ -205,9 +44,9 @@ void stp_to_glb_v2(const std::string& stp_file,
 
     // Mesh parameters
     IMeshTools_Parameters meshParams;
-    meshParams.Angle = angularDeflection;
-    meshParams.Deflection = linearDeflection;
-    meshParams.Relative = relativeDeflection;
+    meshParams.Angle = config.angularDeflection;
+    meshParams.Deflection = config.linearDeflection;
+    meshParams.Relative = config.relativeDeflection;
     meshParams.MinSize = 0.1;
     meshParams.AngleInterior = 0.5;
     meshParams.DeflectionInterior = 0.1;
@@ -218,9 +57,10 @@ void stp_to_glb_v2(const std::string& stp_file,
     {
         TIME_BLOCK("Reading STEP file");
 
-        if (reader.ReadFile(stp_file.c_str(), params) != IFSelect_RetDone)
+        if (reader.ReadFile(config.stpFile.string().c_str(), params) != IFSelect_RetDone)
             throw std::runtime_error("Error reading STEP file");
     }
+
     Interface_Static::SetIVal ("FromSTEP.FixShape.FixShellOrientationMode", 0);
     const Handle(TDocStd_Document) doc = new TDocStd_Document("MDTV-XCAF");
     TDF_Label label = doc->Main();
@@ -228,6 +68,7 @@ void stp_to_glb_v2(const std::string& stp_file,
 
     auto num_roots = reader.NbRootsForTransfer();
     std::cout << "Number of roots for transfer: " << num_roots << "\n";
+
     auto default_reader = reader.ChangeReader();
     auto model = default_reader.StepModel();
     auto iterator = model->Entities();
@@ -235,21 +76,30 @@ void stp_to_glb_v2(const std::string& stp_file,
 
     std::cout << "Number of entities: " << num_entities << "\n";
 
-    auto max_shape = 5;
+    // Build the graph of references
+    Handle(Interface_InterfaceModel) interfaceModel = Handle(Interface_InterfaceModel)::DownCast(model);
+    Interface_Graph theGraph(interfaceModel, /*keepTransient*/ Standard_False);
     auto curr_shape = 0;
 
     // Use the iterator to get all shape entities
     AdaCPPStepWriter stp_writer;
     while (iterator.More())
     {
-        auto const entity = iterator.Value();
-        auto shape =entity_to_shape(entity, default_reader, shape_tool, meshParams);
+        auto const& entity = iterator.Value();
+        TopoDS_Shape shape = entity_to_shape(entity, default_reader, shape_tool, meshParams, config.solidOnly);
         if (!shape.IsNull())
         {
+            auto product_name = getStepProductName(entity, theGraph);
+            if (product_name.empty()) {
+                product_name = "NoName";
+                std::cout << "Unable to find name for: " << entity->DynamicType()->Name() << "\n"; // no forced flush
+            }
+            std::cout << "Adding Shape: " << product_name << "\n"; // no forced flush
             auto color = random_color();
-            stp_writer.add_shape(shape, "test", color);
+            stp_writer.add_shape(shape, product_name, color);
             curr_shape++;
-            if (curr_shape >= max_shape)
+
+            if (curr_shape >= config.max_geometry_num)
             {
                 break;
             }
@@ -259,29 +109,11 @@ void stp_to_glb_v2(const std::string& stp_file,
     }
 
     // Write to GLB
-    std::cout << "Writing to GLB file: " << glb_file << "\n";
+    std::cout << "Writing to GLB file: " << config.stpFile << "\n";
     {
         TIME_BLOCK("Writing to GLB file");
-
-        RWGltf_CafWriter writer(glb_file.c_str(), true); // true for binary format
-
-        // Additional file information (can be empty if not needed)
-        const TColStd_IndexedDataMapOfStringString file_info;
-
-        // Progress indicator (can be null if progress tracking is not needed)
-        const Message_ProgressRange progress;
-
-        // if output parent directory is != "" and does not exist, create it
-        const std::filesystem::path glb_path(glb_file);
-        if (const std::filesystem::path glb_dir = glb_path.parent_path(); !glb_dir.empty() && !exists(glb_dir))
-        {
-            create_directories(glb_dir);
-        }
-        if (!writer.Perform(doc, file_info, progress))
-        {
-            throw std::runtime_error("Error writing GLB file");
-        }
+        to_glb_from_doc(config.glbFile, doc);
     }
-
-    stp_writer.export_step("demo.stp");
+    const std::filesystem::path out_file = config.glbFile.parent_path() / config.glbFile.stem().concat("-debug.stp");
+    stp_writer.export_step(out_file.string().c_str());
 }

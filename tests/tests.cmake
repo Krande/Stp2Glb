@@ -26,10 +26,21 @@ add_test(NAME stp_glb_cli_flat_plate_v3 COMMAND STP2GLB
         WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/bin"
 )
 
+add_test(NAME stp_glb_cli_as1_v2 COMMAND STP2GLB
+        --stp "${CMAKE_CURRENT_SOURCE_DIR}/files/as1-oc-214.stp"
+        --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/as1-oc-214-limited.glb
+        --version 2
+        --solid-only=true
+        --max-geometry-num=2
+        WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/bin"
+)
+
 add_test(NAME stp_glb_cli_large_v2 COMMAND STP2GLB
         --stp "${CMAKE_CURRENT_SOURCE_DIR}/temp/really_large.stp"
-        --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/output.glb
+        --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/really_large-v2.glb
         --version 2
+        --solid-only=true
+        --max-geometry-num=10
         WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/bin"
 )
 

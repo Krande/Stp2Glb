@@ -4,7 +4,8 @@
 
 #ifndef SC_PARSER_H
 #define SC_PARSER_H
-#include <iostream>
 
-void lazy_step_parser(const std::string& stp_file);
+#include "../../config_structs.h"
+
+void lazy_step_parser(const GlobalConfig& config);
 #endif //SC_PARSER_H

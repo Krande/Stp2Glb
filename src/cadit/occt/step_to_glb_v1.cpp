@@ -10,13 +10,9 @@
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <filesystem>
 #include <XCAFDoc_ShapeTool.hxx>
+#include "../../config_structs.h"
 
-
-void stp_to_glb_v1(const std::string& stp_file,
-                const std::string& glb_file,
-                const double linearDeflection,
-                const double angularDeflection,
-                const bool relativeDeflection)
+void stp_to_glb_v1(const GlobalConfig& config)
 {
     // Initialize the STEPCAFControl_Reader
     STEPCAFControl_Reader reader;
@@ -30,8 +26,8 @@ void stp_to_glb_v1(const std::string& stp_file,
 
     // Read the STEP file
     auto start = std::chrono::high_resolution_clock::now();
-    std::cout << "Reading STEP file: " << stp_file << std::endl;
-    if (reader.ReadFile(stp_file.c_str()) != IFSelect_RetDone)
+    std::cout << "Reading STEP file: " << config.stpFile << std::endl;
+    if (reader.ReadFile(config.stpFile.string().c_str()) != IFSelect_RetDone)
         throw std::runtime_error("Error reading STEP file");
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration<double>(stop - start).count();
@@ -60,16 +56,16 @@ void stp_to_glb_v1(const std::string& stp_file,
     {
         TopoDS_Shape shape = shapeTool->GetShape(labelSeq.Value(i));
         std::cout << "Tessellating shape " << i << " of " << labelSeq.Length() << std::endl;
-        BRepMesh_IncrementalMesh(shape, linearDeflection, relativeDeflection, angularDeflection, false);
+        BRepMesh_IncrementalMesh(shape, config.linearDeflection, config.relativeDeflection, config.angularDeflection, false);
     }
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration<double>(stop - start).count();
     std::cout << "Tessellation complete in " << std::fixed << std::setprecision(2) << duration << " seconds" << std::endl;
 
     // Write to GLB
-    std:: cout << "Writing to GLB file: " << glb_file << std::endl;
+    std:: cout << "Writing to GLB file: " << config.glbFile << std::endl;
     start = std::chrono::high_resolution_clock::now();
-    RWGltf_CafWriter writer(glb_file.c_str(), true); // true for binary format
+    RWGltf_CafWriter writer(config.glbFile.c_str(), true); // true for binary format
 
     // Additional file information (can be empty if not needed)
     const TColStd_IndexedDataMapOfStringString file_info;
@@ -78,8 +74,7 @@ void stp_to_glb_v1(const std::string& stp_file,
     const Message_ProgressRange progress;
 
     // if output parent directory is != "" and does not exist, create it
-    const std::filesystem::path glb_path(glb_file);
-    if (const std::filesystem::path glb_dir = glb_path.parent_path(); !glb_dir.empty() && !exists(glb_dir))
+    if (const std::filesystem::path glb_dir = config.glbFile.parent_path(); !glb_dir.empty() && !exists(glb_dir))
     {
         create_directories(glb_dir);
     }

@@ -14,6 +14,8 @@
 #include "../../geom/Color.h"
 #include "helpers.h"
 
+#include <chrono>
+
 
 TopoDS_Solid create_box(const std::vector<float> &box_origin, const std::vector<float> &box_dims) {
     gp_Pnt aBoxOrigin(box_origin[0], box_origin[1], box_origin[2]);
@@ -26,7 +28,7 @@ TopoDS_Solid create_box(const std::vector<float> &box_origin, const std::vector<
 Color random_color() {
     static std::mt19937 generator(std::random_device{}());
     static std::uniform_real_distribution<float> distribution(0.0, 1.0);
-    return Color(distribution(generator), distribution(generator), distribution(generator));
+    return Color(distribution(generator), distribution(generator), distribution(generator), 1.0);
 }
 
 void set_name(const TDF_Label &label, const std::optional<std::string> &name) {
@@ -46,3 +48,19 @@ void set_color(const TDF_Label &label, const Color &color,
     Quantity_Color qty_color(r, g, b, Quantity_TOC_RGB);
     tool->SetColor(label, qty_color, XCAFDoc_ColorType::XCAFDoc_ColorSurf);
 }
+
+TimingContext::TimingContext(std::string name)
+    : label(std::move(name)), start(std::chrono::high_resolution_clock::now())
+{
+    std::cout << "Starting: " << label << std::endl;
+}
+
+TimingContext::~TimingContext()
+{
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration<double>(stop - start).count();
+    std::cout << label << " took " << std::fixed << std::setprecision(2)
+              << duration << " seconds." << std::endl;
+}
+
+#define TIME_BLOCK(name) TimingContext timer_##__LINE__(name)

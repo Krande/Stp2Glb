@@ -17,8 +17,11 @@
 #include <GeomAPI_ProjectPointOnSurf.hxx>
 #include <Precision.hxx>
 #include <TopLoc_Location.hxx>  // For location
+#include <filesystem>
+#include "../../config_structs.h"
 
-void make_a_bspline_surf(const std::string& stp_file) {
+void make_a_bspline_surf(const GlobalConfig& config) {
+
     // Define the control points for the B-Spline surface from STEP file
     TColgp_Array2OfPnt controlPoints(1, 4, 1, 2);  // Adjust range as needed
     controlPoints.SetValue(1, 1, gp_Pnt(-0.5, 0.5, 0.0));
@@ -107,6 +110,6 @@ void make_a_bspline_surf(const std::string& stp_file) {
     // Export to STEP file if needed
     STEPControl_Writer writer;
     writer.Transfer(shell, STEPControl_AsIs);
-    writer.Write(stp_file.c_str());
+    writer.Write(config.stpFile.string().c_str());
 
 }

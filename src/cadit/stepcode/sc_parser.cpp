@@ -3,9 +3,13 @@
 //
 #include <windows.h>
 #include "sc_parser.h"
+
+#include <filesystem>
 #include <iostream>
 #include "cllazyfile/lazyInstMgr.h"
 #include <psapi.h>
+
+#include "../../config_structs.h"
 
 // Function to print memory usage
 void printMemoryUsage()
@@ -18,13 +22,13 @@ void printMemoryUsage()
 }
 
 // Function to parse a STEP file using lazy loading
-void lazy_step_parser(const std::string& stp_file)
+void lazy_step_parser(const GlobalConfig& config)
 {
     auto mgr = std::make_unique<lazyInstMgr>();
 
     printMemoryUsage(); // Memory before opening the file
 
-    mgr->openFile(stp_file);
+    mgr->openFile(config.stpFile.string());
 
     printMemoryUsage(); // Memory after opening the file
 
