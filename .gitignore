@@ -5,4 +5,5 @@ cmake-build*/
 .env.json
 temp/
 .vs/
+# pixi environments
 .pixi/

@@ -1,28 +1,30 @@
 [project]
 name = "stp2glb"
 version = "1.0.0"
-description = "A STP to GLB converter"
-channels = ["conda-forge"]
-platforms = ["win-64"]
-
-[environments]
-local-win = ["local-win"]
-
-[feature.local-win]
-platforms = ["win-64"]
+description = "A STEP to GLB converter"
 channels = ["https://repo.prefix.dev/adapy-tools", "conda-forge"]
+platforms = ["win-64"]
 
-[feature.local-win.dependencies]
+[dependencies]
 c-compiler = "*"
 cxx-compiler = "*"
-occt = { version = "7.8.1", build = "*novtk*debug*", channel = "https://repo.prefix.dev/adapy-tools" }
-stepcode = { version = "0.8.2", build = "*debug*" }
-ifcopenshell = { version = "*", build = "*debug*" }
-pytest = "7.3.1"
-cmake = "3.29.2"
+cmake = "3.30.5"
 numpy = "*"
 cgal-cpp = "5.6.1"
 cli11 = "*"
 tinygltf = "2.8.19"
 python = "3.12"
 tbb-devel = "*"
+ninja = "*"
+pytest = "7.3.1"
+
+[target.win-64.dependencies]
+vs2022_win-64 = "*"
+occt = { version = "7.8.1", build = "*novtk*debug*", channel = "https://repo.prefix.dev/adapy-tools" }
+stepcode = { version = "0.8.2", build = "*debug*" }
+ifcopenshell = { version = "*", build = "*debug*" }
+
+[target.win-64.tasks]
+build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-release", "--fresh"] }
+install = { cmd = ["ninja", "-C", "build/win-local-release", "install"], description = "Install the project" }
+test = { cmd = ["ctest"], cwd="build/win-local-release", description = "Run the tests" }

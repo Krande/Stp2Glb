@@ -6,9 +6,10 @@
       "generator": "Ninja",
       "hidden": false,
       "environment": {
-        "PREFIX": "${sourceDir}/.pixi/envs/local-win",
-        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/local-win/Library"
+        "PREFIX": "${sourceDir}/.pixi/envs/default",
+        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/default/Library"
       },
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_PREFIX_PATH": "$env{LIBRARY_PREFIX};$env{LIBRARY_PREFIX}/include;$env{LIBRARY_PREFIX}/lib;$env{LIBRARY_PREFIX}/bin",
@@ -19,6 +20,14 @@
         "STEPCODE_INCLUDE_DIR": "$env{LIBRARY_PREFIX}/include/stepcode",
         "BUILD_TESTING": "ON",
         "CONDA_LOCAL_DEV": "ON"
+      }
+    },
+    {
+      "name": "win-local-release",
+      "inherits": "win-local",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": "ON"
       }
     }
   ]

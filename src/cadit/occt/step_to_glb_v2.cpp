@@ -94,6 +94,16 @@ void stp_to_glb_v2(const GlobalConfig& config)
                 product_name = "NoName";
                 std::cout << "Unable to find name for: " << entity->DynamicType()->Name() << "\n"; // no forced flush
             }
+            if (!config.filter_names.empty())
+            {
+                auto vector_contains = check_if_string_in_vector(config.filter_names, product_name);
+
+                if (!vector_contains)
+                {
+                    iterator.Next();
+                    continue;
+                }
+            }
             std::cout << "Adding Shape: " << product_name << "\n"; // no forced flush
             auto color = random_color();
             stp_writer.add_shape(shape, product_name, color);

@@ -22,7 +22,7 @@ struct GlobalConfig {
     // Debug parameters
     bool solidOnly;
     int max_geometry_num;
-    std::string filter_name;
+    std::vector<std::string> filter_names;
 };
 
 

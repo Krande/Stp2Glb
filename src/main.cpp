@@ -13,7 +13,7 @@
 #include "cadit/occt/step_to_glb_v1.h"
 #include "cadit/stepcode/sc_parser.h"
 #include "cadit/occt/bsplinesurf.h"
-
+#include "cadit/occt/helpers.h"
 
 
 int main(int argc, char *argv[]) {
@@ -27,9 +27,48 @@ int main(int argc, char *argv[]) {
     app.add_option("--version", "Version of the converter")->default_val(1)->check(CLI::Range(0, 3));
     app.add_option("--solid-only", "Solid only")->default_val(false);
     app.add_option("--max-geometry-num", "Maximum number of geometries to convert")->default_val(5);
-    app.add_option("--filter-name", "Filter name");
+    app.add_option("--filter-names", "Filter name. Command separated list")->default_val("");
+    app.add_option("--filter-names-file", "Filter name file")->default_val("");
 
     CLI11_PARSE(app, argc, argv);
+
+    auto filter_names_input = app.get_option("--filter-names")->as<std::string>();
+    auto filter_names_file = app.get_option("--filter-names-file")->as<std::string>();
+
+    std::vector<std::string> filter_names;
+
+    // Process `--filter-names`
+    if (!filter_names_input.empty()) {
+        // Strip quotes from the input
+        filter_names_input = strip_quotes(filter_names_input);
+
+        auto names = split(filter_names_input, ',');
+
+        filter_names.insert(filter_names.end(), names.begin(), names.end());
+    }
+
+    // Process `--filter-names-file`
+    if (!filter_names_file.empty()) {
+        std::ifstream file(filter_names_file);
+        if (file.is_open()) {
+            std::string line;
+            while (std::getline(file, line)) {
+                if (!line.empty()) {
+                    filter_names.push_back(line);
+                }
+            }
+            file.close();
+        } else {
+            std::cerr << "Error: Could not open file: " << filter_names_file << std::endl;
+            return 1;
+        }
+    }
+
+    // Print the collected filter names for debugging
+    std::cout << "Collected Filter Names:" << std::endl;
+    for (const auto& name : filter_names) {
+        std::cout << name << std::endl;
+    }
 
     // make configuration
     GlobalConfig config{
@@ -41,7 +80,7 @@ int main(int argc, char *argv[]) {
         .relativeDeflection = app.get_option("--rel-defl")->as<bool>(),
         .solidOnly = app.get_option("--solid-only")->as<bool>(),
         .max_geometry_num = app.get_option("--max-geometry-num")->as<int>(),
-        .filter_name = app.get_option("--filter-name")->as<std::string>()
+        .filter_names = filter_names
     };
 
     try {
