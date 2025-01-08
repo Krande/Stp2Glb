@@ -14,6 +14,7 @@
 #include "step_writer.h"
 #include <Interface_Static.hxx>
 #include <Interface_Graph.hxx>
+#include <StepBasic_Product.hxx>
 #include <TDataStd_Name.hxx>
 
 #include "gltf_writer.h"
@@ -69,39 +70,82 @@ void stp_to_glb_v2(const GlobalConfig &config) {
 
     auto default_reader = reader.ChangeReader();
     auto model = default_reader.StepModel();
+
+    // Build the graph of references
+    Interface_Graph theGraph(model, /*keepTransient*/ Standard_False);
+
     auto iterator = model->Entities();
     auto num_entities = iterator.NbEntities();
 
     std::cout << "Number of entities: " << num_entities << "\n";
 
-    // Build the graph of references
-    Interface_Graph theGraph(model, /*keepTransient*/ Standard_False);
     auto curr_shape = 0;
 
     // Use the iterator to get all shape entities
     AdaCPPStepWriter stp_writer;
     while (iterator.More()) {
+
         auto const &entity = iterator.Value();
+
+        // Get the integer index for the entity
+        Standard_Integer entityIndex = model->IdentLabel(entity);
+
+        if (entity->IsKind(STANDARD_TYPE(StepBasic_Product)))
+        {
+            std::cout << "Entity " << entityIndex << " matches filter.\n";
+        }
+
         ConvertObject cobject = entity_to_shape(entity, default_reader, shape_tool, meshParams, config.solidOnly);
         TopoDS_Shape shape = cobject.shape;
 
         if (!shape.IsNull()) {
+            TDF_Label shape_label;
+
+            // Apply the location (transformation) to the shape
+            update_location(shape);
+
             auto product_name = getStepProductName(entity, theGraph);
             auto graph_name = getStepProductNameFromGraph(entity, theGraph);
+            auto base_type = entity->DynamicType()->Name();
+
             if (product_name.empty()) {
-                product_name = "NoName";
-                std::cout << "Unable to find name for: " << entity->DynamicType()->Name() << "\n"; // no forced flush
+                if (!graph_name.empty())
+                {
+                    cobject.name = graph_name;
+                } else
+                {
+                    cobject.name = "NoName";
+                    std::cout << "Unable to find name for: " << " (Entity: " << entityIndex << "Type: "<< base_type << ")\n"; // no forced flush
+                }
             } else {
                 if (cobject.name.empty() || cobject.name != product_name) {
-                    std::cout << "Replaced Object name from: " << cobject.name << " to: " << product_name << "\n";
                     // no forced flush
                     cobject.name = product_name;
                 }
             }
 
+            {
+                TIME_BLOCK("Applying tessellation");
+                // Perform tessellation (discretization) on the shape
+                BRepMesh_IncrementalMesh mesh(shape, meshParams); // Adjust 0.1 for finer/coarser tessellation
+            }
+
+            // Add the TopoDS_Shape to the document
+            {
+                TIME_BLOCK("Adding shape '" + cobject.name + "' to document\n");
+                shape_label = shape_tool->AddShape(shape);
+            }
+
+            if (!shape_label.IsNull()) {
+                std::cout << "Shape added to the document successfully!" << "\n";
+                cobject.shape_label = shape_label;
+            } else {
+                std::cerr << "Failed to add shape to the document." << "\n";
+            }
+
             TDataStd_Name::Set(cobject.shape_label, cobject.name.c_str());
             if (!config.filter_names.empty()) {
-                auto vector_contains = check_if_string_in_vector(config.filter_names, product_name);
+                auto vector_contains = check_if_string_in_vector(config.filter_names, cobject.name);
 
                 if (!vector_contains) {
                     iterator.Next();
@@ -109,9 +153,10 @@ void stp_to_glb_v2(const GlobalConfig &config) {
                 }
             }
 
-            std::cout << "Adding Shape: " << product_name << "\n"; // no forced flush
+            std::cout << "Adding Shape: " << cobject.name << " (Entity: " << entityIndex << ")\n"; // no forced flush
             auto color = random_color();
-            stp_writer.add_shape(shape, product_name, color);
+
+            stp_writer.add_shape(shape, cobject.name, color);
             curr_shape++;
 
             if (curr_shape >= config.max_geometry_num) {
@@ -127,6 +172,8 @@ void stp_to_glb_v2(const GlobalConfig &config) {
         TIME_BLOCK("Writing to GLB file");
         to_glb_from_doc(config.glbFile, doc);
     }
+
     const std::filesystem::path out_file = config.glbFile.parent_path() / config.glbFile.stem().concat("-debug.stp");
+
     stp_writer.export_step(out_file.string().c_str());
 }

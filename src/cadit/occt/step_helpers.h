@@ -52,4 +52,6 @@ ConvertObject entity_to_shape(const Handle(Standard_Transient) &entity,
 
 std::string getStepProductNameFromGraph(const Handle(Standard_Transient) &entity, Interface_Graph &theGraph);
 
+bool CustomFilter(const Handle(Standard_Transient)& entity);
+
 #endif //STEP_HELPERS_H

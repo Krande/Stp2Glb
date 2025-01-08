@@ -179,16 +179,17 @@ std::string getStepProductName(const Handle(Standard_Transient) &entity, Interfa
                     return result;
                 }
             }
-        } else {
-            // Maybe it's a plain StepRepr_Representation
-            Handle(StepRepr_Representation) repr =
-                    Handle(StepRepr_Representation)::DownCast(entity);
-            if (!repr.IsNull()) {
-                if (!repr->Name().IsNull()) {
-                    std::string result = repr->Name()->ToCString();
-                    if (!result.empty()) {
-                        return result;
-                    }
+        }
+    }
+    {
+        // Maybe it's a plain StepRepr_Representation
+        Handle(StepRepr_Representation) repr =
+                Handle(StepRepr_Representation)::DownCast(entity);
+        if (!repr.IsNull()) {
+            if (!repr->Name().IsNull()) {
+                std::string result = repr->Name()->ToCString();
+                if (!result.empty()) {
+                    return result;
                 }
             }
         }
@@ -216,6 +217,7 @@ std::string getStepProductName(const Handle(Standard_Transient) &entity, Interfa
 
 void update_location(TopoDS_Shape &shape) {
     TopLoc_Location loc = shape.Location();
+
     // Extract translation components from the transformation matrix
     gp_XYZ translation = loc.Transformation().TranslationPart();
     Standard_Real x = translation.X();
@@ -251,8 +253,6 @@ TopoDS_Shape make_shape(const Handle(StepShape_SolidModel) &solid_model, STEPCon
         };
         TopoDS_Shape shape = reader.Shape(reader.NbShapes());
 
-        // Apply the location (transformation) to the shape
-        update_location(shape);
         // Todo: traverse parent objects to resolve affected transformations applied indirectly to this shape
         return shape;
     }
@@ -269,8 +269,6 @@ TopoDS_Shape make_shape(const Handle(StepShape_Face) &face, STEPControl_Reader &
         TopoDS_Shape shape = reader.Shape(reader.NbShapes());
 
 
-        // Apply the location (transformation) to the shape
-        update_location(shape);
         return shape;
     }
     return {};
@@ -330,6 +328,7 @@ ConvertObject entity_to_shape(const Handle(Standard_Transient) &entity,
         shape = make_shape(solid_model, default_reader);
         name = get_name(solid_model);
     }
+
     // Check if the entity is a face (StepShape_AdvancedFace or StepShape_Face)
     if (entity->IsKind(STANDARD_TYPE(StepShape_AdvancedFace)) || entity->IsKind(
             STANDARD_TYPE(StepShape_Face))) {
@@ -340,17 +339,13 @@ ConvertObject entity_to_shape(const Handle(Standard_Transient) &entity,
         }
     }
 
-    if (!shape.IsNull()) {
-        shape_label = add_shape_to_document(shape, name, shape_tool, meshParams);
-        added_to_model = true;
-
-
-        if (!shape_label.IsNull()) {
-            std::cout << "Shape added to the document successfully!" << std::endl;
-        } else {
-            std::cerr << "Failed to add shape to the document." << std::endl;
-        }
-    }
-
     return {name, shape,shape_label, added_to_model};
+}
+
+// Custom filter function (example: filter by entity type or name)
+bool CustomFilter(const Handle(Standard_Transient)& entity) {
+    if (entity->IsKind(STANDARD_TYPE(StepBasic_ProductDefinition))) {
+        return true; // Matches filter
+    }
+    return false;
 }
