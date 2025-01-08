@@ -28,6 +28,11 @@
 
 Handle(Standard_Transient) get_entity_from_graph_path(const Handle(Standard_Transient) &entity,
                                                       Interface_Graph &theGraph, std::vector<std::string> path) {
+    // First check if the entity is contained in the path
+    if (std::find(path.begin(), path.end(), entity->DynamicType()->Name()) == path.end()) {
+        return {};
+    }
+
     // find index of entity in path
     auto index = std::find(path.begin(), path.end(), entity->DynamicType()->Name());
     // if entity is last item in path, return it
@@ -105,6 +110,7 @@ std::string getStepProductNameFromGraph(const Handle(Standard_Transient) &entity
     // "StepBasic_ProductDefinition", "StepBasic_ProductDefinitionFormation", "StepBasic_Product"
     Handle(StepRepr_RepresentationItem) item =
                 Handle(StepRepr_RepresentationItem)::DownCast(entity);
+
     auto base_type = entity->DynamicType()->Name();
     auto shape_def_rep = get_entity_from_graph_path(entity, theGraph, path);
 
@@ -203,12 +209,7 @@ std::string getStepProductName(const Handle(Standard_Transient) &entity, Interfa
             }
         }
     }
-    {
-        auto result = getStepProductNameFromGraph(entity, theGraph);
-        if (!result.empty()) {
-            return result;
-        }
-    }
+
     // If everything fails or is empty, we return empty string
     return {};
 }
@@ -252,6 +253,7 @@ TopoDS_Shape make_shape(const Handle(StepShape_SolidModel) &solid_model, STEPCon
 
         // Apply the location (transformation) to the shape
         update_location(shape);
+        // Todo: traverse parent objects to resolve affected transformations applied indirectly to this shape
         return shape;
     }
     return {};
@@ -274,8 +276,10 @@ TopoDS_Shape make_shape(const Handle(StepShape_Face) &face, STEPControl_Reader &
     return {};
 }
 
-bool add_shape_to_document(const TopoDS_Shape &shape, const std::string &name,
+TDF_Label add_shape_to_document(const TopoDS_Shape &shape, const std::string &name,
                            const Handle(XCAFDoc_ShapeTool) &shape_tool, IMeshTools_Parameters &meshParams) {
+    TDF_Label shape_label;
+
     if (!shape.IsNull()) {
         {
             TIME_BLOCK("Applying tessellation");
@@ -286,22 +290,30 @@ bool add_shape_to_document(const TopoDS_Shape &shape, const std::string &name,
         // Add the TopoDS_Shape to the document
         {
             TIME_BLOCK("Adding shape '" + name + "' to document\n");
-            TDF_Label shape_label = shape_tool->AddShape(shape);
-            TDataStd_Name::Set(shape_label, name.c_str());
+            shape_label = shape_tool->AddShape(shape);
 
-            if (!shape_label.IsNull()) {
-                std::cout << "Shape added to the document successfully!" << std::endl;
-                return true;
-            } else {
-                std::cerr << "Failed to add shape to the document." << std::endl;
-                return false;
-            }
         }
     }
-    return false;
+    return shape_label;
 }
 
-TopoDS_Shape entity_to_shape(const Handle(Standard_Transient) &entity,
+// Constructor
+ConvertObject::ConvertObject(const std::string& name, const TopoDS_Shape& shape, TDF_Label& shape_label, bool addedToModel)
+    : name(name), shape(shape), shape_label(shape_label), AddedToModel(addedToModel) {}
+
+// Destructor (optional if needed)
+ConvertObject::~ConvertObject() {
+    // Clean up resources if necessary
+}
+
+// Member function implementation
+void ConvertObject::printDetails() const {
+    std::cout << "Name: " << name << "\n"
+              << "Added to Model: " << (AddedToModel ? "Yes" : "No") << std::endl;
+    // Note: Printing the shape details requires appropriate handling as TopoDS_Shape doesn't have a simple string representation
+}
+
+ConvertObject entity_to_shape(const Handle(Standard_Transient) &entity,
                              STEPControl_Reader default_reader,
                              const Handle(XCAFDoc_ShapeTool) &shape_tool,
                              IMeshTools_Parameters &meshParams,
@@ -309,25 +321,36 @@ TopoDS_Shape entity_to_shape(const Handle(Standard_Transient) &entity,
     const Handle(Standard_Type) type = entity->DynamicType();
     bool added_to_model = false;
     TopoDS_Shape shape;
+    std::string name;
+    TDF_Label shape_label;
+
     // Check if the entity is a solid model
     if (entity->IsKind(STANDARD_TYPE(StepShape_SolidModel))) {
         Handle(StepShape_SolidModel) solid_model = Handle(StepShape_SolidModel)::DownCast(entity);
         shape = make_shape(solid_model, default_reader);
-        auto name = get_name(solid_model);
-        if (add_shape_to_document(shape, name, shape_tool, meshParams))
-            added_to_model = true;
+        name = get_name(solid_model);
     }
     // Check if the entity is a face (StepShape_AdvancedFace or StepShape_Face)
     if (entity->IsKind(STANDARD_TYPE(StepShape_AdvancedFace)) || entity->IsKind(
             STANDARD_TYPE(StepShape_Face))) {
-        if (solid_only) {
-            return shape;
+        if (!solid_only) {
+            Handle(StepShape_Face) face = Handle(StepShape_Face)::DownCast(entity);
+            shape = make_shape(face, default_reader);
+            name = get_name(face);
         }
-        Handle(StepShape_Face) face = Handle(StepShape_Face)::DownCast(entity);
-        shape = make_shape(face, default_reader);
-        auto name = get_name(face);
-        if (add_shape_to_document(shape, name, shape_tool, meshParams))
-            added_to_model = true;
     }
-    return shape;
+
+    if (!shape.IsNull()) {
+        shape_label = add_shape_to_document(shape, name, shape_tool, meshParams);
+        added_to_model = true;
+
+
+        if (!shape_label.IsNull()) {
+            std::cout << "Shape added to the document successfully!" << std::endl;
+        } else {
+            std::cerr << "Failed to add shape to the document." << std::endl;
+        }
+    }
+
+    return {name, shape,shape_label, added_to_model};
 }

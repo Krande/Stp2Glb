@@ -14,17 +14,17 @@
 #include "step_writer.h"
 #include <Interface_Static.hxx>
 #include <Interface_Graph.hxx>
+#include <TDataStd_Name.hxx>
 
 #include "gltf_writer.h"
 #include "step_helpers.h"
 #include "../../config_structs.h"
 
 
-void stp_to_glb_v2(const GlobalConfig& config)
-{
+void stp_to_glb_v2(const GlobalConfig &config) {
     // Initialize the STEPCAFControl_Reader
     STEPCAFControl_Reader reader;
-    Interface_Static::SetIVal ("FromSTEP.FixShape.FixShellOrientationMode", 0);
+    Interface_Static::SetIVal("FromSTEP.FixShape.FixShellOrientationMode", 0);
     Interface_Static::SetIVal("read.step.shape.repair.mode", 0);
     Interface_Static::SetIVal("read.precision.mode", 0);
 
@@ -52,16 +52,14 @@ void stp_to_glb_v2(const GlobalConfig& config)
     meshParams.DeflectionInterior = 0.1;
     meshParams.CleanModel = Standard_True;
     meshParams.InParallel = Standard_True;
-    meshParams.AllowQualityDecrease = Standard_True;
-
-    {
+    meshParams.AllowQualityDecrease = Standard_True; {
         TIME_BLOCK("Reading STEP file");
 
         if (reader.ReadFile(config.stpFile.string().c_str(), params) != IFSelect_RetDone)
             throw std::runtime_error("Error reading STEP file");
     }
 
-    Interface_Static::SetIVal ("FromSTEP.FixShape.FixShellOrientationMode", 0);
+    Interface_Static::SetIVal("FromSTEP.FixShape.FixShellOrientationMode", 0);
     const Handle(TDocStd_Document) doc = new TDocStd_Document("MDTV-XCAF");
     TDF_Label label = doc->Main();
     Handle(XCAFDoc_ShapeTool) shape_tool = XCAFDoc_DocumentTool::ShapeTool(label);
@@ -77,40 +75,46 @@ void stp_to_glb_v2(const GlobalConfig& config)
     std::cout << "Number of entities: " << num_entities << "\n";
 
     // Build the graph of references
-    Handle(Interface_InterfaceModel) interfaceModel = Handle(Interface_InterfaceModel)::DownCast(model);
-    Interface_Graph theGraph(interfaceModel, /*keepTransient*/ Standard_False);
+    Interface_Graph theGraph(model, /*keepTransient*/ Standard_False);
     auto curr_shape = 0;
 
     // Use the iterator to get all shape entities
     AdaCPPStepWriter stp_writer;
-    while (iterator.More())
-    {
-        auto const& entity = iterator.Value();
-        TopoDS_Shape shape = entity_to_shape(entity, default_reader, shape_tool, meshParams, config.solidOnly);
-        if (!shape.IsNull())
-        {
+    while (iterator.More()) {
+        auto const &entity = iterator.Value();
+        ConvertObject cobject = entity_to_shape(entity, default_reader, shape_tool, meshParams, config.solidOnly);
+        TopoDS_Shape shape = cobject.shape;
+
+        if (!shape.IsNull()) {
             auto product_name = getStepProductName(entity, theGraph);
+            auto graph_name = getStepProductNameFromGraph(entity, theGraph);
             if (product_name.empty()) {
                 product_name = "NoName";
                 std::cout << "Unable to find name for: " << entity->DynamicType()->Name() << "\n"; // no forced flush
+            } else {
+                if (cobject.name.empty() || cobject.name != product_name) {
+                    std::cout << "Replaced Object name from: " << cobject.name << " to: " << product_name << "\n";
+                    // no forced flush
+                    cobject.name = product_name;
+                }
             }
-            if (!config.filter_names.empty())
-            {
+
+            TDataStd_Name::Set(cobject.shape_label, cobject.name.c_str());
+            if (!config.filter_names.empty()) {
                 auto vector_contains = check_if_string_in_vector(config.filter_names, product_name);
 
-                if (!vector_contains)
-                {
+                if (!vector_contains) {
                     iterator.Next();
                     continue;
                 }
             }
+
             std::cout << "Adding Shape: " << product_name << "\n"; // no forced flush
             auto color = random_color();
             stp_writer.add_shape(shape, product_name, color);
             curr_shape++;
 
-            if (curr_shape >= config.max_geometry_num)
-            {
+            if (curr_shape >= config.max_geometry_num) {
                 break;
             }
         }
@@ -119,8 +123,7 @@ void stp_to_glb_v2(const GlobalConfig& config)
     }
 
     // Write to GLB
-    std::cout << "Writing to GLB file: " << config.stpFile << "\n";
-    {
+    std::cout << "Writing to GLB file: " << config.stpFile << "\n"; {
         TIME_BLOCK("Writing to GLB file");
         to_glb_from_doc(config.glbFile, doc);
     }
