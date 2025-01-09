@@ -15,8 +15,68 @@
 #include "cadit/occt/bsplinesurf.h"
 #include "cadit/occt/helpers.h"
 
+GlobalConfig process_parameters(CLI::App& app)
+{
+    auto filter_names_input = app.get_option("--filter-names")->as<std::string>();
+    auto filter_names_file = app.get_option("--filter-names-file")->as<std::string>();
 
-int main(int argc, char *argv[]) {
+    std::vector<std::string> filter_names;
+
+    // Process `--filter-names`
+    if (!filter_names_input.empty())
+    {
+        // Strip quotes from the input
+        filter_names_input = strip_quotes(filter_names_input);
+
+        auto names = split(filter_names_input, ',');
+
+        filter_names.insert(filter_names.end(), names.begin(), names.end());
+    }
+
+    // Process `--filter-names-file`
+    if (!filter_names_file.empty())
+    {
+        if (std::ifstream file(filter_names_file); file.is_open())
+        {
+            std::string line;
+            while (std::getline(file, line))
+            {
+                if (!line.empty())
+                {
+                    filter_names.push_back(line);
+                }
+            }
+            file.close();
+        }
+        else
+        {
+            throw std::runtime_error("Error: Could not open file");
+        }
+    }
+
+    // Print the collected filter names for debugging
+    std::cout << "Collected Filter Names:" << std::endl;
+    for (const auto& name : filter_names)
+    {
+        std::cout << name << std::endl;
+    }
+
+    // make configuration
+    return {
+        .stpFile = app.get_option("--stp")->results()[0],
+        .glbFile = app.get_option("--glb")->results()[0],
+        .version = app.get_option("--version")->as<int>(),
+        .linearDeflection = app.get_option("--lin-defl")->as<double>(),
+        .angularDeflection = app.get_option("--ang-defl")->as<double>(),
+        .relativeDeflection = app.get_option("--rel-defl")->as<bool>(),
+        .solidOnly = app.get_option("--solid-only")->as<bool>(),
+        .max_geometry_num = app.get_option("--max-geometry-num")->as<int>(),
+        .filter_names = filter_names
+    };
+}
+
+int main(int argc, char* argv[])
+{
     CLI::App app{"STEP to GLB converter"};
     app.add_option("--stp", "STEP filepath")->required();
     app.add_option("--glb", "GLB filepath")->required();
@@ -32,58 +92,10 @@ int main(int argc, char *argv[]) {
 
     CLI11_PARSE(app, argc, argv);
 
-    auto filter_names_input = app.get_option("--filter-names")->as<std::string>();
-    auto filter_names_file = app.get_option("--filter-names-file")->as<std::string>();
+    const auto config = process_parameters(app);
 
-    std::vector<std::string> filter_names;
-
-    // Process `--filter-names`
-    if (!filter_names_input.empty()) {
-        // Strip quotes from the input
-        filter_names_input = strip_quotes(filter_names_input);
-
-        auto names = split(filter_names_input, ',');
-
-        filter_names.insert(filter_names.end(), names.begin(), names.end());
-    }
-
-    // Process `--filter-names-file`
-    if (!filter_names_file.empty()) {
-        std::ifstream file(filter_names_file);
-        if (file.is_open()) {
-            std::string line;
-            while (std::getline(file, line)) {
-                if (!line.empty()) {
-                    filter_names.push_back(line);
-                }
-            }
-            file.close();
-        } else {
-            std::cerr << "Error: Could not open file: " << filter_names_file << std::endl;
-            return 1;
-        }
-    }
-
-    // Print the collected filter names for debugging
-    std::cout << "Collected Filter Names:" << std::endl;
-    for (const auto& name : filter_names) {
-        std::cout << name << std::endl;
-    }
-
-    // make configuration
-    GlobalConfig config{
-        .stpFile = app.get_option("--stp")->results()[0],
-        .glbFile = app.get_option("--glb")->results()[0],
-        .version = app.get_option("--version")->as<int>(),
-        .linearDeflection = app.get_option("--lin-defl")->as<double>(),
-        .angularDeflection = app.get_option("--ang-defl")->as<double>(),
-        .relativeDeflection = app.get_option("--rel-defl")->as<bool>(),
-        .solidOnly = app.get_option("--solid-only")->as<bool>(),
-        .max_geometry_num = app.get_option("--max-geometry-num")->as<int>(),
-        .filter_names = filter_names
-    };
-
-    try {
+    try
+    {
         const auto start = std::chrono::high_resolution_clock::now();
         if (config.version == 0)
             make_a_bspline_surf(config);
@@ -93,13 +105,18 @@ int main(int argc, char *argv[]) {
             stp_to_glb_v2(config);
         else if (config.version == 3)
             lazy_step_parser(config);
-
+        else
+        {
+            std::cout << "Invalid version number." << std::endl;
+            return 1;
+        }
         const auto stop = std::chrono::high_resolution_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
         std::cout << "STP converted in: " << duration.count() << " microseconds" << std::endl;
-
-    } catch (...) {
+    }
+    catch (...)
+    {
         std::cout << "Unknown error occurred." << std::endl;
         return 1;
     }
