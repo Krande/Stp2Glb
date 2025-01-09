@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     app.add_flag("--rel-defl", "Relative deflection");
     app.add_option("--version", "Version of the converter")->default_val(1)->check(CLI::Range(0, 3));
     app.add_option("--solid-only", "Solid only")->default_val(false);
-    app.add_option("--max-geometry-num", "Maximum number of geometries to convert")->default_val(5);
+    app.add_option("--max-geometry-num", "Maximum number of geometries to convert")->default_val(0);
     app.add_option("--filter-names", "Filter name. Command separated list")->default_val("");
     app.add_option("--filter-names-file", "Filter name file")->default_val("");
 

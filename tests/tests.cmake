@@ -24,7 +24,7 @@ add_test(NAME stp_glb_cli_as1_v2 COMMAND STP2GLB
         --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/as1-oc-214-limited.glb
         --version 2
         --solid-only=true
-        --max-geometry-num=5
+        --max-geometry-num=0
         WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/bin"
 )
 

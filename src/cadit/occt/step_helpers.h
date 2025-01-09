@@ -53,5 +53,12 @@ ConvertObject entity_to_shape(const Handle(Standard_Transient) &entity,
 std::string getStepProductNameFromGraph(const Handle(Standard_Transient) &entity, Interface_Graph &theGraph);
 
 bool CustomFilter(const Handle(Standard_Transient)& entity);
+Interface_EntityIterator MyTypedExpansions(const Handle(Standard_Transient)& rootEntity,
+                                          const Handle(Standard_Type)& targetType,
+                                          const Interface_Graph& theGraph);
 
+Interface_EntityIterator MyTypedExpansions_BiDirectional(
+    const Handle(Standard_Transient)& rootEntity,
+    const Handle(Standard_Type)& targetType,
+    const Interface_Graph& theGraph);
 #endif //STEP_HELPERS_H

@@ -25,6 +25,7 @@
 #include <StepBasic_Product.hxx>
 #include <StepRepr_Representation.hxx>
 #include <TCollection_HAsciiString.hxx>
+#include <unordered_set>
 
 Handle(Standard_Transient) get_entity_from_graph_path(const Handle(Standard_Transient) &entity,
                                                       Interface_Graph &theGraph, std::vector<std::string> path) {
@@ -54,8 +55,7 @@ Handle(Standard_Transient) get_entity_from_graph_path(const Handle(Standard_Tran
     return {};
 }
 
-std::string extractProductNameFromSDR(const Handle(StepShape_ShapeDefinitionRepresentation)& sdr)
-{
+std::string extractProductNameFromSDR(const Handle(StepShape_ShapeDefinitionRepresentation) &sdr) {
     if (sdr.IsNull()) {
         return {};
     }
@@ -69,7 +69,7 @@ std::string extractProductNameFromSDR(const Handle(StepShape_ShapeDefinitionRepr
 
     // 2) The underlying handle is def.Value(). We expect it might be a StepBasic_ProductDefinition
     Handle(StepRepr_ProductDefinitionShape) pds =
-        Handle(StepRepr_ProductDefinitionShape)::DownCast(def.Value());
+            Handle(StepRepr_ProductDefinitionShape)::DownCast(def.Value());
     if (pds.IsNull()) {
         // It's not a product definition. Could be something else.
         return {};
@@ -105,11 +105,12 @@ std::string getStepProductNameFromGraph(const Handle(Standard_Transient) &entity
     // StepShape_ManifoldSolidBrep -> SHAPE_REPRESENTATION -> ShapeDefinitionRepresentation
     // 1) Get the model index for this entity
     std::vector<std::string> path = {
-        "StepShape_ManifoldSolidBrep", "StepShape_AdvancedBrepShapeRepresentation", "StepShape_ShapeDefinitionRepresentation"
+        "StepShape_ManifoldSolidBrep", "StepShape_AdvancedBrepShapeRepresentation",
+        "StepShape_ShapeDefinitionRepresentation"
     };
     // "StepBasic_ProductDefinition", "StepBasic_ProductDefinitionFormation", "StepBasic_Product"
     Handle(StepRepr_RepresentationItem) item =
-                Handle(StepRepr_RepresentationItem)::DownCast(entity);
+            Handle(StepRepr_RepresentationItem)::DownCast(entity);
 
     auto base_type = entity->DynamicType()->Name();
     auto shape_def_rep = get_entity_from_graph_path(entity, theGraph, path);
@@ -120,12 +121,12 @@ std::string getStepProductNameFromGraph(const Handle(Standard_Transient) &entity
     // get NAME from PRODUCT
 
     if (!shape_def_rep.IsNull()) {
-        auto productName = extractProductNameFromSDR(Handle(StepShape_ShapeDefinitionRepresentation)::DownCast(shape_def_rep));
+        auto productName = extractProductNameFromSDR(
+            Handle(StepShape_ShapeDefinitionRepresentation)::DownCast(shape_def_rep));
         if (!productName.empty()) {
             return productName;
         }
     }
-
 
 
     return "";
@@ -180,8 +181,7 @@ std::string getStepProductName(const Handle(Standard_Transient) &entity, Interfa
                 }
             }
         }
-    }
-    {
+    } {
         // Maybe it's a plain StepRepr_Representation
         Handle(StepRepr_Representation) repr =
                 Handle(StepRepr_Representation)::DownCast(entity);
@@ -275,7 +275,7 @@ TopoDS_Shape make_shape(const Handle(StepShape_Face) &face, STEPControl_Reader &
 }
 
 TDF_Label add_shape_to_document(const TopoDS_Shape &shape, const std::string &name,
-                           const Handle(XCAFDoc_ShapeTool) &shape_tool, IMeshTools_Parameters &meshParams) {
+                                const Handle(XCAFDoc_ShapeTool) &shape_tool, IMeshTools_Parameters &meshParams) {
     TDF_Label shape_label;
 
     if (!shape.IsNull()) {
@@ -289,15 +289,16 @@ TDF_Label add_shape_to_document(const TopoDS_Shape &shape, const std::string &na
         {
             TIME_BLOCK("Adding shape '" + name + "' to document\n");
             shape_label = shape_tool->AddShape(shape);
-
         }
     }
     return shape_label;
 }
 
 // Constructor
-ConvertObject::ConvertObject(const std::string& name, const TopoDS_Shape& shape, TDF_Label& shape_label, bool addedToModel)
-    : name(name), shape(shape), shape_label(shape_label), AddedToModel(addedToModel) {}
+ConvertObject::ConvertObject(const std::string &name, const TopoDS_Shape &shape, TDF_Label &shape_label,
+                             bool addedToModel)
+    : name(name), shape(shape), shape_label(shape_label), AddedToModel(addedToModel) {
+}
 
 // Destructor (optional if needed)
 ConvertObject::~ConvertObject() {
@@ -307,15 +308,15 @@ ConvertObject::~ConvertObject() {
 // Member function implementation
 void ConvertObject::printDetails() const {
     std::cout << "Name: " << name << "\n"
-              << "Added to Model: " << (AddedToModel ? "Yes" : "No") << std::endl;
+            << "Added to Model: " << (AddedToModel ? "Yes" : "No") << std::endl;
     // Note: Printing the shape details requires appropriate handling as TopoDS_Shape doesn't have a simple string representation
 }
 
 ConvertObject entity_to_shape(const Handle(Standard_Transient) &entity,
-                             STEPControl_Reader default_reader,
-                             const Handle(XCAFDoc_ShapeTool) &shape_tool,
-                             IMeshTools_Parameters &meshParams,
-                             const bool solid_only) {
+                              STEPControl_Reader default_reader,
+                              const Handle(XCAFDoc_ShapeTool) &shape_tool,
+                              IMeshTools_Parameters &meshParams,
+                              const bool solid_only) {
     const Handle(Standard_Type) type = entity->DynamicType();
     bool added_to_model = false;
     TopoDS_Shape shape;
@@ -339,13 +340,170 @@ ConvertObject entity_to_shape(const Handle(Standard_Transient) &entity,
         }
     }
 
-    return {name, shape,shape_label, added_to_model};
+    return {name, shape, shape_label, added_to_model};
 }
 
 // Custom filter function (example: filter by entity type or name)
-bool CustomFilter(const Handle(Standard_Transient)& entity) {
+bool CustomFilter(const Handle(Standard_Transient) &entity) {
     if (entity->IsKind(STANDARD_TYPE(StepBasic_ProductDefinition))) {
         return true; // Matches filter
     }
     return false;
+}
+
+Interface_EntityIterator MyTypedExpansions(const Handle(Standard_Transient) &rootEntity,
+                                           const Handle(Standard_Type) &targetType,
+                                           const Interface_Graph &theGraph) {
+    // Prepare an empty sequence to accumulate matching entities
+    Handle(TColStd_HSequenceOfTransient) matchedEntities =
+            new TColStd_HSequenceOfTransient();
+
+    if (rootEntity.IsNull()) {
+        // Return an empty iterator
+        return Interface_EntityIterator(matchedEntities);
+    }
+
+    // We'll need the model to get entity indices (theGraph.Model()->Number())
+    Handle(Interface_InterfaceModel) model = theGraph.Model();
+    if (model.IsNull()) {
+        // Return empty if no model
+        return Interface_EntityIterator(matchedEntities);
+    }
+
+    // BFS queue
+    std::queue<Handle(Standard_Transient) > toVisit;
+    // track visited with a set of entity indices to avoid loops
+    std::unordered_set<Standard_Integer> visited;
+
+    // Helper to enqueue unvisited
+    auto enqueueIfNotVisited = [&](const Handle(Standard_Transient) &ent) {
+        if (ent.IsNull()) return;
+        // theGraph.Model()->Number(ent) gives 1-based index in the model
+        Standard_Integer idx = model->Number(ent);
+        // Only enqueue if it's in the model and hasn't been visited
+        if (idx > 0 && visited.find(idx) == visited.end()) {
+            visited.insert(idx);
+            toVisit.push(ent);
+        }
+    };
+
+    // Initialize BFS with the root
+    enqueueIfNotVisited(rootEntity);
+
+    // BFS loop
+    while (!toVisit.empty()) {
+        Handle(Standard_Transient) current = toVisit.front();
+        toVisit.pop();
+
+        // If current is or derives from targetType, record it
+        if (current->IsKind(targetType)) {
+            matchedEntities->Append(current);
+        }
+
+        // Get child references using Sharings(...) = "downstream" references
+        // (If you need “upstream,” you’d use Shareds(...).)
+        Interface_EntityIterator sharings = theGraph.Sharings(current);
+        for (sharings.Start(); sharings.More(); sharings.Next()) {
+            enqueueIfNotVisited(sharings.Value());
+        }
+    }
+
+    // Build an Interface_EntityIterator from the matched sequence
+    return Interface_EntityIterator(matchedEntities);
+}
+
+// A BFS that visits both Sharings (downstream references) and Shareds (upstream references).
+// This ensures we don't miss geometry that might only be discovered by climbing "up"
+// to a higher-level entity, then going "down" again.
+Interface_EntityIterator MyTypedExpansions_BiDirectional(
+    const Handle(Standard_Transient) &rootEntity,
+    const Handle(Standard_Type) &targetType,
+    const Interface_Graph &theGraph) {
+    // Where we'll store any entity matching `targetType` that we encounter.
+    Handle(TColStd_HSequenceOfTransient) matchedEntities = new TColStd_HSequenceOfTransient();
+
+    if (rootEntity.IsNull()) {
+        return Interface_EntityIterator(matchedEntities);
+    }
+
+    // We'll need the model to get entity indices.
+    Handle(Interface_InterfaceModel) model = theGraph.Model();
+    if (model.IsNull()) {
+        return Interface_EntityIterator(matchedEntities);
+    }
+
+    std::queue<Handle(Standard_Transient) > toVisit;
+    std::unordered_set<Standard_Integer> visited; // track visited by their 1-based model index
+
+    // Helper to enqueue an entity if not already visited
+    auto enqueueIfNotVisited = [&](const Handle(Standard_Transient) &ent) {
+        if (!ent.IsNull()) {
+            Standard_Integer idx = model->Number(ent);
+            if (idx > 0 && visited.find(idx) == visited.end()) {
+                visited.insert(idx);
+                toVisit.push(ent);
+            }
+        }
+    };
+
+    // Start BFS from the root
+    enqueueIfNotVisited(rootEntity);
+
+    // BFS loop
+    while (!toVisit.empty()) {
+        Handle(Standard_Transient) current = toVisit.front();
+        toVisit.pop();
+
+        // If current matches (or derives from) the target type, record it
+        // if (current->IsKind(targetType)) {
+        //     matchedEntities->Append(current);
+        // }
+
+        // Gather children (Sharings): "downstream" references
+        {
+            Interface_EntityIterator childIter = theGraph.Sharings(current);
+            for (childIter.Start(); childIter.More(); childIter.Next()) {
+                enqueueIfNotVisited(childIter.Value());
+            }
+        }
+
+        // Gather parents (Shareds): "upstream" references
+        {
+            // if iskind product, skip this
+            if (current->IsKind(STANDARD_TYPE(StepShape_ShapeDefinitionRepresentation))) {
+                Handle(StepShape_ShapeDefinitionRepresentation) item =
+                        Handle(StepShape_ShapeDefinitionRepresentation)::DownCast(current);
+                auto rest = item->UsedRepresentation();
+                enqueueIfNotVisited(rest);
+            } else if (current->IsKind(STANDARD_TYPE(StepShape_ShapeRepresentation))) {
+                Handle(StepShape_ShapeRepresentation) item =
+                        Handle(StepShape_ShapeRepresentation)::DownCast(current);
+                auto items = item->Items();
+                if (!items.IsNull()) {
+                    Standard_Integer nbItems = items->Length();
+                    for (Standard_Integer i = 1; i <= nbItems; i++) {
+                        // Each element is a StepRepr_RepresentationItem
+                        Handle(StepRepr_RepresentationItem) repItem = items->Value(i);
+                        // If you need to cast to, e.g., StepShape_ManifoldSolidBrep:
+                        if (repItem->IsKind(STANDARD_TYPE(StepShape_SolidModel))) {
+                            // You can check its actual type if desired
+                            std::cout << "  Representation item "
+                                      << i << " is type: "
+                                      << repItem->DynamicType()->Name() << "\n";
+
+                            auto brep = Handle(StepShape_SolidModel)::DownCast(repItem);
+                            // Use brep ...
+                            matchedEntities->Append(brep);
+                        }
+                    }
+                }
+
+            } else {
+
+            }
+        }
+    }
+
+    // Now build an iterator from the matched sequence
+    return Interface_EntityIterator(matchedEntities);
 }
