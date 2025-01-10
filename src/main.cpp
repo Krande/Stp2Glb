@@ -52,13 +52,13 @@ GlobalConfig process_parameters(CLI::App& app)
         {
             throw std::runtime_error("Error: Could not open file");
         }
-    }
 
-    // Print the collected filter names for debugging
-    std::cout << "Collected Filter Names:" << std::endl;
-    for (const auto& name : filter_names)
-    {
-        std::cout << name << std::endl;
+        // Print the collected filter names for debugging
+        std::cout << "Collected Filter Names:" << std::endl;
+        for (const auto& name : filter_names)
+        {
+            std::cout << name << std::endl;
+        }
     }
 
     // make configuration

@@ -60,6 +60,7 @@ add_definitions(-DNOMINMAX)
 # Install the C++ executable
 set(SOURCES
         src/main.cpp
+        src/cadit/occt/step_tree.cpp
         src/geom/Color.cpp
         src/cadit/occt/step_to_glb_v2.cpp
         src/cadit/stepcode/sc_parser.cpp
@@ -69,10 +70,10 @@ set(SOURCES
         src/cadit/occt/bsplinesurf.cpp
         src/cadit/occt/helpers.cpp
         src/cadit/occt/step_writer.cpp
-        src/cadit/occt/step_tree.cpp
-        src/cadit/occt/step_tree.h
+
 )
 set(HEADERS
+        src/cadit/occt/step_tree.h
         src/config_structs.h
         src/geom/Color.h
         src/cadit/occt/step_to_glb_v1.h
@@ -83,8 +84,6 @@ set(HEADERS
         src/cadit/occt/bsplinesurf.h
         src/cadit/occt/helpers.h
         src/cadit/occt/step_writer.h
-        src/cadit/occt/step_tree.cpp
-        src/cadit/occt/step_tree.h
 )
 
 add_executable(STP2GLB ${SOURCES} ${HEADERS})

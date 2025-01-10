@@ -1,6 +1,3 @@
-//
-// Created by ofskrand on 09.01.2025.
-//
 #include <Interface_InterfaceModel.hxx>
 #include <Interface_Graph.hxx>
 #include <Interface_EntityIterator.hxx>
@@ -10,7 +7,6 @@
 #include <StepBasic_ProductDefinition.hxx>
 #include <StepBasic_ProductDefinitionFormation.hxx>
 #include <StepRepr_NextAssemblyUsageOccurrence.hxx>
-#include <StepRepr_ProductDefinitionShape.hxx>
 
 #include <TCollection_HAsciiString.hxx>
 #include <Standard_Type.hxx>
@@ -19,17 +15,15 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <queue>
-#include <iostream>
 
 #include <sstream>
 #include "step_tree.h"
 
 
-
 // Helper: given a Product, find its associated ProductDefinition (if any)
 static Handle(StepBasic_ProductDefinition) FindProductDefinition(
     const Handle(StepBasic_Product)& product,
-    const Handle(Interface_InterfaceModel)& model)
+    const Handle(Interface_InterfaceModel)& model, const Interface_Graph& theGraph)
 {
     // A Product typically references a ProductDefinitionFormation
     // which references a ProductDefinition. Or in some schemas,
@@ -38,22 +32,42 @@ static Handle(StepBasic_ProductDefinition) FindProductDefinition(
     //
     // If your schema doesn't use Formation(), adapt accordingly (e.g. FrameOfReference).
     Handle(StepBasic_ProductDefinitionFormation) formation;
-    // The product uses FrameOfReference() instead of Formation()
-    Handle(Standard_Transient) frameRef = product->FrameOfReference();
-    if (!frameRef.IsNull() && frameRef->IsKind(STANDARD_TYPE(StepBasic_ProductDefinitionFormation))) {
-        formation = Handle(StepBasic_ProductDefinitionFormation)::DownCast(frameRef);
-
+    {
+        Interface_EntityIterator childIter = theGraph.Sharings(product);
+        for (childIter.Start(); childIter.More(); childIter.Next()) {
+            Handle(Standard_Transient) ent = childIter.Value();
+            if (ent->IsKind(STANDARD_TYPE(StepBasic_ProductDefinitionFormation))) {
+                formation = Handle(StepBasic_ProductDefinitionFormation)::DownCast(ent);
+                break;
+            }
+        }
     }
-    if (formation.IsNull()) {
+
+    if (formation.IsNull())
+    {
         return nullptr;
     }
+    {
+        Interface_EntityIterator childIter = theGraph.Sharings(formation);
+        for (childIter.Start(); childIter.More(); childIter.Next())
+        {
+            Handle(Standard_Transient) ent = childIter.Value();
+            if (ent->IsKind(STANDARD_TYPE(StepBasic_ProductDefinition)))
+            {
+                return Handle(StepBasic_ProductDefinition)::DownCast(ent);
+            }
+        }
 
+    }
     // The ProductDefinition we want references this formation
-    for (Standard_Integer i = 1; i <= model->NbEntities(); i++) {
+    for (Standard_Integer i = 1; i <= model->NbEntities(); i++)
+    {
         Handle(Standard_Transient) ent = model->Value(i);
-        if (ent->IsKind(STANDARD_TYPE(StepBasic_ProductDefinition))) {
+        if (ent->IsKind(STANDARD_TYPE(StepBasic_ProductDefinition)))
+        {
             auto pd = Handle(StepBasic_ProductDefinition)::DownCast(ent);
-            if (!pd.IsNull() && pd->Formation() == formation) {
+            if (!pd.IsNull() && pd->Formation() == formation)
+            {
                 return pd;
             }
         }
@@ -67,11 +81,14 @@ BuildProductIndexMap(const Handle(Interface_InterfaceModel)& model)
 {
     std::unordered_map<Handle(StepBasic_Product), int> productToIndex;
 
-    for (Standard_Integer i = 1; i <= model->NbEntities(); i++) {
+    for (Standard_Integer i = 1; i <= model->NbEntities(); i++)
+    {
         Handle(Standard_Transient) entity = model->Value(i);
-        if (entity->IsKind(STANDARD_TYPE(StepBasic_Product))) {
+        if (entity->IsKind(STANDARD_TYPE(StepBasic_Product)))
+        {
             auto product = Handle(StepBasic_Product)::DownCast(entity);
-            if (!product.IsNull()) {
+            if (!product.IsNull())
+            {
                 productToIndex[product] = i; // store 1-based index
             }
         }
@@ -81,7 +98,7 @@ BuildProductIndexMap(const Handle(Interface_InterfaceModel)& model)
 
 // Build a map: parentIndex -> list of child indices
 static std::unordered_map<int, std::vector<int>>
-BuildAssemblyLinks(const Handle(Interface_InterfaceModel)& model)
+BuildAssemblyLinks(const Handle(Interface_InterfaceModel)& model, const Interface_Graph& theGraph)
 {
     // We'll track: Parent's entity index -> [Child's entity index...]
     std::unordered_map<int, std::vector<int>> parentToChildren;
@@ -92,12 +109,14 @@ BuildAssemblyLinks(const Handle(Interface_InterfaceModel)& model)
 
     // 1) find all products, map each to its product definition
     auto productIndexMap = BuildProductIndexMap(model);
-    for (auto& kv : productIndexMap) {
+    for (auto& kv : productIndexMap)
+    {
         Handle(StepBasic_Product) product = kv.first;
         int productIdx = kv.second;
 
-        Handle(StepBasic_ProductDefinition) pd = FindProductDefinition(product, model);
-        if (!pd.IsNull()) {
+        Handle(StepBasic_ProductDefinition) pd = FindProductDefinition(product, model, theGraph);
+        if (!pd.IsNull())
+        {
             pdToProductIndex[pd] = productIdx;
         }
     }
@@ -105,19 +124,23 @@ BuildAssemblyLinks(const Handle(Interface_InterfaceModel)& model)
     // 2) Traverse NextAssemblyUsageOccurrence to see parent-child relationships
     //    Each NAUO references two ProductDefinitions: "RelatingProductDefinition"
     //    (the parent) and "RelatedProductDefinition" (the child).
-    for (Standard_Integer i = 1; i <= model->NbEntities(); i++) {
+    for (Standard_Integer i = 1; i <= model->NbEntities(); i++)
+    {
         Handle(Standard_Transient) ent = model->Value(i);
-        if (ent->IsKind(STANDARD_TYPE(StepRepr_NextAssemblyUsageOccurrence))) {
+        if (ent->IsKind(STANDARD_TYPE(StepRepr_NextAssemblyUsageOccurrence)))
+        {
             auto nauo = Handle(StepRepr_NextAssemblyUsageOccurrence)::DownCast(ent);
-            if (!nauo.IsNull()) {
+            if (!nauo.IsNull())
+            {
                 Handle(StepBasic_ProductDefinition) pdParent = nauo->RelatingProductDefinition();
-                Handle(StepBasic_ProductDefinition) pdChild  = nauo->RelatedProductDefinition();
+                Handle(StepBasic_ProductDefinition) pdChild = nauo->RelatedProductDefinition();
 
                 auto itParent = pdToProductIndex.find(pdParent);
-                auto itChild  = pdToProductIndex.find(pdChild);
-                if (itParent != pdToProductIndex.end() && itChild != pdToProductIndex.end()) {
+                auto itChild = pdToProductIndex.find(pdChild);
+                if (itParent != pdToProductIndex.end() && itChild != pdToProductIndex.end())
+                {
                     int parentIdx = itParent->second;
-                    int childIdx  = itChild->second;
+                    int childIdx = itChild->second;
 
                     parentToChildren[parentIdx].push_back(childIdx);
                 }
@@ -138,16 +161,21 @@ static ProductNode BuildProductNode(
 
     Handle(Standard_Transient) ent = model->Value(productIndex);
     auto product = Handle(StepBasic_Product)::DownCast(ent);
-    if (!product.IsNull() && !product->Name().IsNull()) {
+    if (!product.IsNull() && !product->Name().IsNull())
+    {
         node.name = product->Name()->ToCString();
-    } else {
+    }
+    else
+    {
         node.name = "(unnamed product)";
     }
 
     // Recurse for children
     auto it = parentToChildren.find(productIndex);
-    if (it != parentToChildren.end()) {
-        for (int childIdx : it->second) {
+    if (it != parentToChildren.end())
+    {
+        for (int childIdx : it->second)
+        {
             node.children.push_back(
                 BuildProductNode(childIdx, parentToChildren, model)
             );
@@ -157,15 +185,17 @@ static ProductNode BuildProductNode(
 }
 
 // Main function: extracts top-level ProductNode trees
-std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model)
+std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model, const Interface_Graph& theGraph)
 {
     // 1) Build the map of parent->children relationships
-    auto parentToChildren = BuildAssemblyLinks(model);
+    auto parentToChildren = BuildAssemblyLinks(model, theGraph);
 
     // 2) We want to find "root" products (those that never appear as a child)
     std::unordered_set<int> allChildren;
-    for (auto& kv : parentToChildren) {
-        for (int child : kv.second) {
+    for (auto& kv : parentToChildren)
+    {
+        for (int child : kv.second)
+        {
             allChildren.insert(child);
         }
     }
@@ -173,14 +203,17 @@ std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_Interfac
     // 3) Gather all product indices
     std::vector<int> allProducts;
     auto productIndexMap = BuildProductIndexMap(model);
-    for (auto& kv : productIndexMap) {
+    for (auto& kv : productIndexMap)
+    {
         allProducts.push_back(kv.second);
     }
 
     // 4) For each product, if it’s NOT in allChildren => it’s a root
     std::vector<ProductNode> roots;
-    for (int idx : allProducts) {
-        if (allChildren.find(idx) == allChildren.end()) {
+    for (int idx : allProducts)
+    {
+        if (allChildren.find(idx) == allChildren.end())
+        {
             // This is a root product
             roots.push_back(BuildProductNode(idx, parentToChildren, model));
         }
@@ -189,12 +222,12 @@ std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_Interfac
 }
 
 
-
 // Simple recursive JSON builder
 static void ProductNodeToJson(const ProductNode& node, std::ostream& os, int indentLevel)
 {
     // Utility lambda to insert some indentation spaces
-    auto indent = [&](int level) {
+    auto indent = [&](int level)
+    {
         for (int i = 0; i < level; i++) os << "  ";
     };
 
@@ -209,9 +242,11 @@ static void ProductNodeToJson(const ProductNode& node, std::ostream& os, int ind
 
     indent(indentLevel + 1);
     os << "\"children\": [\n";
-    for (size_t i = 0; i < node.children.size(); i++) {
+    for (size_t i = 0; i < node.children.size(); i++)
+    {
         ProductNodeToJson(node.children[i], os, indentLevel + 2);
-        if (i + 1 < node.children.size()) {
+        if (i + 1 < node.children.size())
+        {
             os << ",";
         }
         os << "\n";
@@ -227,9 +262,11 @@ std::string ExportHierarchyToJson(const std::vector<ProductNode>& roots)
 {
     std::ostringstream oss;
     oss << "[\n";
-    for (size_t i = 0; i < roots.size(); i++) {
+    for (size_t i = 0; i < roots.size(); i++)
+    {
         ProductNodeToJson(roots[i], oss, 1);
-        if (i + 1 < roots.size()) {
+        if (i + 1 < roots.size())
+        {
             oss << ",";
         }
         oss << "\n";

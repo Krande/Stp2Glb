@@ -7,6 +7,7 @@
 
 #include <STEPCAFControl_Reader.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
+#include <StepBasic_Product.hxx>
 #include <Interface_Graph.hxx>
 #include <XCAFDoc_ShapeTool.hxx>
 #include <StepShape_SolidModel.hxx>
@@ -57,8 +58,11 @@ Interface_EntityIterator MyTypedExpansions(const Handle(Standard_Transient)& roo
                                           const Handle(Standard_Type)& targetType,
                                           const Interface_Graph& theGraph);
 
-Interface_EntityIterator MyTypedExpansions_BiDirectional(
+Interface_EntityIterator Get_Associated_SolidModel_BiDirectional(
     const Handle(Standard_Transient)& rootEntity,
     const Handle(Standard_Type)& targetType,
     const Interface_Graph& theGraph);
+
+gp_Trsf get_product_transform(TopoDS_Shape& shape, const Handle(StepBasic_Product)& product);
+
 #endif //STEP_HELPERS_H

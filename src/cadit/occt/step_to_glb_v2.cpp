@@ -12,6 +12,9 @@
 #include <StepRepr_ProductDefinitionShape.hxx>
 #include <iostream>
 #include "step_to_glb_v2.h"
+
+#include <BRepBuilderAPI_Transform.hxx>
+
 #include "step_writer.h"
 #include <Interface_Static.hxx>
 #include <Interface_Graph.hxx>
@@ -85,11 +88,11 @@ void stp_to_glb_v2(const GlobalConfig &config) {
 
     auto curr_shape = 0;
 
-    // Use the iterator to get all shape entities
-    AdaCPPStepWriter stp_writer;
-
     // Extract hierarchy
-    std::vector<ProductNode> roots = ExtractProductHierarchy(model);
+    std::vector<ProductNode> roots = ExtractProductHierarchy(model, theGraph);
+
+    // Use the iterator to get all shape entities
+    AdaCPPStepWriter stp_writer = AdaCPPStepWriter("Assembly", roots);
 
     // Convert to JSON
     std::string jsonOutput = ExportHierarchyToJson(roots);
@@ -101,95 +104,110 @@ void stp_to_glb_v2(const GlobalConfig &config) {
     file.close();
 
     std::cout << "Hierarchy exported to assembly_hierarchy.json\n";
-    theGraph.GetFromModel();
+
     while (iterator.More()) {
         auto const &entity = iterator.Value();
 
         // Get the integer index for the entity
         Standard_Integer entityIndex = model->IdentLabel(entity);
+
         // Detect if this entity is a StepBasic_Product
-        if (entity->IsKind(STANDARD_TYPE(StepBasic_Product))) {
-            auto product = Handle(StepBasic_Product)::DownCast(entity);
-            auto prod_name = std::string(product->Name()->ToCString());
+        if (!entity->IsKind(STANDARD_TYPE(StepBasic_Product)))
+        {
+            iterator.Next();
+            continue;
+        };
+        auto product = Handle(StepBasic_Product)::DownCast(entity);
+        if (product.IsNull()) {
+            iterator.Next();
+            continue;
+        };
 
-            if (!product.IsNull()) {
-                std::cout
-                        << "\nEntity " << entityIndex
-                        << " is a StepBasic_Product named: "
-                        << product->Name()->ToCString() << "\n";
+        auto prod_name = std::string(product->Name()->ToCString());
 
-                // Recursively find all StepShape_ManifoldSolidBrep in subgraph
-                Interface_EntityIterator breps =
-                        MyTypedExpansions_BiDirectional(product,
-                                                        STANDARD_TYPE(StepShape_SolidModel),
-                                                        theGraph);
+        std::cout
+                << "\nEntity " << entityIndex
+                << " is a StepBasic_Product named: "
+                << product->Name()->ToCString() << "\n";
 
-                std::cout << "  Found " << breps.NbEntities()
-                        << " manifold solid B-rep(s)\n";
+        // Recursively find all StepShape_ManifoldSolidBrep in subgraph
+        Interface_EntityIterator breps =
+                Get_Associated_SolidModel_BiDirectional(product,
+                                                STANDARD_TYPE(StepShape_SolidModel),
+                                                theGraph);
 
-                // Print them
-                for (breps.Start(); breps.More(); breps.Next()) {
-                    Handle(Standard_Transient) foundBrep = breps.Value();
-                    std::cout << "    -> "
-                            << foundBrep->DynamicType()->Name() << "\n";
+        std::cout << "  Found " << breps.NbEntities()
+                << " manifold solid B-rep(s)\n";
 
-                    ConvertObject cobject = entity_to_shape(foundBrep, default_reader, shape_tool, meshParams,
-                                                            config.solidOnly);
-                    TopoDS_Shape shape = cobject.shape;
+        // Print them
+        for (breps.Start(); breps.More(); breps.Next()) {
+            Handle(Standard_Transient) foundBrep = breps.Value();
+            std::cout << "    -> "
+                    << foundBrep->DynamicType()->Name() << "\n";
 
-                    if (!shape.IsNull()) {
-                        TDF_Label shape_label;
+            ConvertObject cobject = entity_to_shape(foundBrep, default_reader, shape_tool, meshParams,
+                                                    config.solidOnly);
+            TopoDS_Shape shape = cobject.shape;
 
-                        // Apply the location (transformation) to the shape
-                        update_location(shape);
+            if (shape.IsNull()) {
+                iterator.Next();
+                continue;
+            };
 
-                        cobject.name = prod_name;
-                        {
-                            TIME_BLOCK("Applying tessellation");
-                            // Perform tessellation (discretization) on the shape
-                            BRepMesh_IncrementalMesh mesh(shape, meshParams);
-                            // Adjust 0.1 for finer/coarser tessellation
-                        }
+            TDF_Label shape_label;
 
-                        // Add the TopoDS_Shape to the document
-                        {
-                            TIME_BLOCK("Adding shape '" + cobject.name + "' to document\n");
-                            shape_label = shape_tool->AddShape(shape);
-                        }
+            // Apply the location (transformation) to the shape
+            update_location(shape);
 
-                        if (!shape_label.IsNull()) {
-                            std::cout << "Shape added to the document successfully!" << "\n";
-                            cobject.shape_label = shape_label;
-                        } else {
-                            std::cerr << "Failed to add shape to the document." << "\n";
-                        }
+            // Add any additional location transformations from product to shape
+            auto trsf = get_product_transform(shape, product);
+            BRepBuilderAPI_Transform shapeTransform(trsf);
+            shapeTransform.Perform(shape, Standard_False);
 
-                        TDataStd_Name::Set(cobject.shape_label, cobject.name.c_str());
-                        if (!config.filter_names.empty()) {
-                            auto vector_contains = check_if_string_in_vector(config.filter_names, cobject.name);
+            cobject.name = prod_name;
 
-                            if (!vector_contains) {
-                                iterator.Next();
-                                continue;
-                            }
-                        }
+            if (!config.filter_names.empty()) {
+                auto vector_contains = check_if_string_in_vector(config.filter_names, cobject.name);
 
-                        std::cout << "Adding Shape: " << cobject.name << " (Entity: " << entityIndex << ")\n";
-                        // no forced flush
-                        auto color = random_color();
-
-                        stp_writer.add_shape(shape, cobject.name, color);
-                        curr_shape++;
-
-                        if (config.max_geometry_num != 0 && curr_shape >= config.max_geometry_num) {
-                            break;
-                        }
-                    }
+                if (!vector_contains) {
+                    iterator.Next();
+                    continue;
                 }
             }
+
+            {
+                TIME_BLOCK("Applying tessellation");
+                // Perform tessellation (discretization) on the shape
+                BRepMesh_IncrementalMesh mesh(shape, meshParams);
+                // Adjust 0.1 for finer/coarser tessellation
+            }
+
+            // Add the TopoDS_Shape to the document
+            {
+                TIME_BLOCK("Adding shape '" + cobject.name + "' to document\n");
+                shape_label = shape_tool->AddShape(shape);
+            }
+
+            if (!shape_label.IsNull()) {
+                std::cout << "Shape added to the document successfully!" << "\n";
+                cobject.shape_label = shape_label;
+            } else {
+                std::cerr << "Failed to add shape to the document." << "\n";
+            }
+
+            TDataStd_Name::Set(cobject.shape_label, cobject.name.c_str());
+
+            std::cout << "Adding Shape: " << cobject.name << " (Entity: " << entityIndex << ")\n";
+            // no forced flush
+            auto color = random_color();
+
+            stp_writer.add_shape(shape, cobject.name, color, prod_name);
+
         }
-
-
+        curr_shape++;
+        if (config.max_geometry_num != 0 && curr_shape >= config.max_geometry_num) {
+            break;
+        }
         iterator.Next();
     }
 
