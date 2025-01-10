@@ -47,6 +47,6 @@ private:
 
     void initialize(const std::string& top_level_name);
     void create_hierarchy(const std::vector<ProductNode>& nodes, const TDF_Label& parent_label);
-    void set_name(const TDF_Label& label, const std::string& name);
-    void set_color(const TDF_Label& label, const Color& rgb_color, const Handle(XCAFDoc_ColorTool)& color_tool);
+    static void set_name(const TDF_Label& label, const std::string& name);
+    static void set_color(const TDF_Label& label, const Color& rgb_color, const Handle(XCAFDoc_ColorTool)& color_tool);
 };

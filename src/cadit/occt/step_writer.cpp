@@ -23,6 +23,7 @@
 #include "../../geom/Color.h"
 #include <Standard_Handle.hxx>  // For Handle
 
+
 // Constructor with only top-level name
 AdaCPPStepWriter::AdaCPPStepWriter(const std::string &top_level_name) {
     initialize(top_level_name);
@@ -38,7 +39,7 @@ AdaCPPStepWriter::AdaCPPStepWriter(const std::string &top_level_name, const std:
 void AdaCPPStepWriter::add_shape(const TopoDS_Shape &shape, const std::string &name,
                                  const Color &rgb_color, const std::string &parent_product_name,
                                  const TDF_Label &parent) {
-    TDF_Label parent_label = parent;
+    TDF_Label parent_label;
     comp_builder_.Add(comp_, shape);
 
     if (parent_product_name.empty()) {
@@ -49,7 +50,7 @@ void AdaCPPStepWriter::add_shape(const TopoDS_Shape &shape, const std::string &n
         throw std::runtime_error("Parent product not found: " + parent_product_name);
     }
 
-    TDF_Label shape_label = shape_tool_->AddSubShape(parent_label, shape);
+    TDF_Label shape_label = shape_tool_->AddComponent(parent_label, shape);
     if (shape_label.IsNull()) {
         shape_label = shape_tool_->AddShape(shape, Standard_False, Standard_False);
     }
@@ -62,6 +63,8 @@ void AdaCPPStepWriter::add_shape(const TopoDS_Shape &shape, const std::string &n
 // Export the STEP file
 void AdaCPPStepWriter::export_step(const std::filesystem::path &step_file) const
 {
+    shape_tool_->UpdateAssemblies();
+
     if (!step_file.parent_path().empty() && step_file.parent_path() != "") {
         create_directories(step_file.parent_path());
     }
@@ -78,11 +81,12 @@ void AdaCPPStepWriter::export_step(const std::filesystem::path &step_file) const
     Interface_Static::SetCVal("write.step.schema", "AP242");
 
     writer.Transfer(doc_, STEPControl_AsIs);
-    IFSelect_ReturnStatus status = writer.Write(step_file.string().c_str());
+    const IFSelect_ReturnStatus status = writer.Write(step_file.string().c_str());
 
     if (status != IFSelect_RetDone) {
         throw std::runtime_error("STEP export failed");
     }
+
     std::cout << "STEP export status: " << status << "\n";
 }
 
@@ -94,11 +98,11 @@ void AdaCPPStepWriter::initialize(const std::string &top_level_name) {
 
     shape_tool_ = XCAFDoc_DocumentTool::ShapeTool(doc_->Main());
     XCAFDoc_ShapeTool::SetAutoNaming(false);
-
     color_tool_ = XCAFDoc_DocumentTool::ColorTool(doc_->Main());
 
     comp_builder_.MakeCompound(comp_);
     tll_ = shape_tool_->AddShape(comp_, Standard_True);
+
     set_name(tll_, top_level_name);
 
 }
