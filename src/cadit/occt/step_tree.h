@@ -9,6 +9,7 @@
 #include <Interface_InterfaceModel.hxx>
 #include <Interface_Graph.hxx>
 #include <Standard_Handle.hxx>  // For Handle
+#include <StepRepr_NextAssemblyUsageOccurrence.hxx>
 
 // Our struct from above
 struct ProductNode {
@@ -29,5 +30,12 @@ void add_geometries_to_nodes(std::vector<ProductNode> &nodes, const Interface_Gr
 gp_Trsf GetTransformationMatrix(
     const Handle(StepRepr_NextAssemblyUsageOccurrence)& nauo,
     const Interface_Graph& theGraph);
+
+static ProductNode BuildProductNodeWithTransform(
+    int productIndex,
+    const std::unordered_map<int, std::vector<int>>& parentToChildren,
+    const Handle(Interface_InterfaceModel)& model,
+    const Interface_Graph& theGraph,
+    const gp_Trsf& parentTransform);
 
 #endif //STEP_TREE_H

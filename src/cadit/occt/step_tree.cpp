@@ -191,7 +191,7 @@ static ProductNode BuildProductNode(
     return node;
 }
 
-// Main function: extracts top-level ProductNode trees
+// Main function: extracts top-level ProductNode trees with transformations
 std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model, const Interface_Graph& theGraph)
 {
     // 1) Build the map of parent->children relationships
@@ -221,13 +221,48 @@ std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_Interfac
     {
         if (allChildren.find(idx) == allChildren.end())
         {
-            // This is a root product
-            roots.push_back(BuildProductNode(idx, parentToChildren, model));
+            // This is a root product, start with the identity transformation
+            roots.push_back(BuildProductNodeWithTransform(idx, parentToChildren, model, theGraph, gp_Trsf()));
         }
     }
     return roots;
 }
 
+
+// Helper function to serialize a gp_Trsf (4x4 transformation matrix) to JSON
+static void TransformationToJson(const gp_Trsf& transform, std::ostream& os, int indentLevel)
+{
+    // Utility lambda to insert some indentation spaces
+    auto indent = [&](int level)
+    {
+        for (int i = 0; i < level; i++) os << "  ";
+    };
+
+    indent(indentLevel);
+    os << "\"transformation\": [\n";
+
+    // gp_Trsf stores a 3x4 matrix (rotation and translation), so we manually append rows
+    for (int i = 1; i <= 3; i++)
+    {
+        indent(indentLevel + 1);
+        os << "[";
+        for (int j = 1; j <= 4; j++) // OpenCASCADE uses 1-based indexing
+        {
+            os << transform.Value(i, j);
+            if (j < 4) os << ", ";
+        }
+        os << "]";
+        if (i < 3) os << ",\n";
+    }
+
+    // Add the homogeneous row for a 4x4 matrix
+    os << ",\n";
+    indent(indentLevel + 1);
+    os << "[0, 0, 0, 1]\n";
+
+    indent(indentLevel);
+    os << "]";
+}
 
 // Simple recursive JSON builder
 static void ProductNodeToJson(const ProductNode& node, std::ostream& os, int indentLevel)
@@ -259,6 +294,10 @@ static void ProductNodeToJson(const ProductNode& node, std::ostream& os, int ind
     }
     os << "],\n";
 
+    // Add the transformation matrix to the JSON output
+    TransformationToJson(node.transformation, os, indentLevel + 1);
+    os << ",\n";
+
     indent(indentLevel + 1);
     os << "\"children\": [\n";
     for (size_t i = 0; i < node.children.size(); i++)
@@ -276,6 +315,7 @@ static void ProductNodeToJson(const ProductNode& node, std::ostream& os, int ind
     indent(indentLevel);
     os << "}";
 }
+
 
 std::string ExportHierarchyToJson(const std::vector<ProductNode>& roots)
 {
@@ -298,7 +338,6 @@ std::string ExportHierarchyToJson(const std::vector<ProductNode>& roots)
 void add_geometries_to_nodes(std::vector<ProductNode> &nodes, const Interface_Graph &theGraph) {
     for (auto &node : nodes) {
         auto& product = theGraph.Entity(node.entityIndex);
-
         Interface_EntityIterator breps =
                 Get_Associated_SolidModel_BiDirectional(product,
                                                 STANDARD_TYPE(StepShape_SolidModel),
@@ -322,51 +361,75 @@ gp_Trsf GetTransformationMatrix(
     const Interface_Graph& theGraph)
 {
     gp_Trsf transformation;
+
+    // Get the Related ProductDefinition
     Handle(StepBasic_ProductDefinition) relatedProdDef = nauo->RelatedProductDefinition();
-
-    // Check if the NAUO provides transformation data
-    if (!relatedShape.IsNull())
+    if (relatedProdDef.IsNull())
     {
-        Interface_EntityIterator refs = theGraph.Sharings(relatedShape);
-        for (refs.Start(); refs.More(); refs.Next())
+        return transformation; // Return identity transform if no related product definition
+    }
+
+    // Find the corresponding ProductDefinitionShape
+    Handle(StepRepr_ProductDefinitionShape) relatedShape;
+    Interface_EntityIterator refs = theGraph.Sharings(relatedProdDef);
+    for (refs.Start(); refs.More(); refs.Next())
+    {
+        const Handle(Standard_Transient) refEntity = refs.Value();
+        if (refEntity->IsKind(STANDARD_TYPE(StepRepr_ProductDefinitionShape)))
         {
-            const Handle(Standard_Transient) refEntity = refs.Value();
-            if (refEntity->IsKind(STANDARD_TYPE(StepGeom_Axis2Placement3d)))
+            relatedShape = Handle(StepRepr_ProductDefinitionShape)::DownCast(refEntity);
+            break;
+        }
+    }
+
+    // If no ProductDefinitionShape is found, return identity transform
+    if (relatedShape.IsNull())
+    {
+        return transformation;
+    }
+
+    // Look for an Axis2Placement3D referenced by the ProductDefinitionShape
+    Interface_EntityIterator shapeRefs = theGraph.Sharings(relatedShape);
+    for (shapeRefs.Start(); shapeRefs.More(); shapeRefs.Next())
+    {
+        const Handle(Standard_Transient) refEntity = shapeRefs.Value();
+        if (refEntity->IsKind(STANDARD_TYPE(StepGeom_Axis2Placement3d)))
+        {
+            auto axisPlacement = Handle(StepGeom_Axis2Placement3d)::DownCast(refEntity);
+
+            // Extract translation
+            if (!axisPlacement->Location().IsNull())
             {
-                auto axisPlacement = Handle(StepGeom_Axis2Placement3d)::DownCast(refEntity);
-
-                // Extract location, direction, and orientation to create the transformation
-                if (!axisPlacement->Location().IsNull())
-                {
-                    auto location = axisPlacement->Location();
-                    transformation.SetTranslation(
-                        gp_Vec(location->CoordinatesValue(1), location->CoordinatesValue(2), location->CoordinatesValue(3)));
-                }
-
-                if (!axisPlacement->RefDirection().IsNull() &&
-                    !axisPlacement->Axis().IsNull())
-                {
-                    auto refDirection = axisPlacement->RefDirection();
-                    auto axis = axisPlacement->Axis();
-                    auto angle = refDirection->Angle(axis);
-
-                    transformation.SetRotation(
-                        gp_Ax1(gp_Pnt(0, 0, 0),
-                               gp_Dir(axis->DirectionRatiosValue(1), axis->DirectionRatiosValue(2), axis->DirectionRatiosValue(3))),
-                        angle);
-                }
-                break;
+                auto location = axisPlacement->Location();
+                transformation.SetTranslation(
+                    gp_Vec(location->CoordinatesValue(1), location->CoordinatesValue(2), location->CoordinatesValue(3)));
             }
+
+            // Extract rotation
+            if (!axisPlacement->RefDirection().IsNull() && !axisPlacement->Axis().IsNull())
+            {
+                auto refDirection = axisPlacement->RefDirection();
+                auto axis = axisPlacement->Axis();
+                auto angle = 0.0;
+
+                transformation.SetRotation(
+                    gp_Ax1(gp_Pnt(0, 0, 0),
+                           gp_Dir(axis->DirectionRatiosValue(1), axis->DirectionRatiosValue(2), axis->DirectionRatiosValue(3))),
+                    angle);
+            }
+            break;
         }
     }
     return transformation;
 }
 
-// Modified BuildProductNode to include transformation data
+
+// Recursive function that builds a ProductNode tree with transformations
 static ProductNode BuildProductNodeWithTransform(
     int productIndex,
     const std::unordered_map<int, std::vector<int>>& parentToChildren,
     const Handle(Interface_InterfaceModel)& model,
+    const Interface_Graph& theGraph,
     const gp_Trsf& parentTransform = gp_Trsf())
 {
     ProductNode node;
@@ -383,27 +446,26 @@ static ProductNode BuildProductNodeWithTransform(
         node.name = "(unnamed product)";
     }
 
-    // Get the transformation for this node
-    gp_Trsf currentTransform = parentTransform;
-
-    // Look for NextAssemblyUsageOccurrence related to this product
+    // Compute the transformation for this node
+    gp_Trsf localTransform;
     for (Standard_Integer i = 1; i <= model->NbEntities(); i++)
     {
         Handle(Standard_Transient) entity = model->Value(i);
         if (entity->IsKind(STANDARD_TYPE(StepRepr_NextAssemblyUsageOccurrence)))
         {
             auto nauo = Handle(StepRepr_NextAssemblyUsageOccurrence)::DownCast(entity);
-            if (!nauo.IsNull() && nauo->RelatedProductDefinition() == product)
+            if (!nauo->RelatedProductDefinition().IsNull() && nauo->RelatedProductDefinition() == Handle(StepBasic_ProductDefinition)::DownCast(product))
             {
-                gp_Trsf localTransform = GetTransformationMatrix(nauo, model);
-                currentTransform.Multiply(localTransform);
+                localTransform = GetTransformationMatrix(nauo, theGraph);
                 break;
             }
         }
     }
 
-    // Store transformation in the node
-    node.transformation = currentTransform; // Assuming ProductNode has a `gp_Trsf` member
+    // Combine parent transformation with local transformation
+    gp_Trsf absoluteTransform = parentTransform;
+    absoluteTransform.Multiply(localTransform);
+    node.transformation = absoluteTransform;
 
     // Recurse for children
     auto it = parentToChildren.find(productIndex);
@@ -412,7 +474,7 @@ static ProductNode BuildProductNodeWithTransform(
         for (int childIdx : it->second)
         {
             node.children.push_back(
-                BuildProductNodeWithTransform(childIdx, parentToChildren, model, currentTransform));
+                BuildProductNodeWithTransform(childIdx, parentToChildren, model, theGraph, absoluteTransform));
         }
     }
     return node;
