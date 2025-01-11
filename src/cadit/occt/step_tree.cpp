@@ -11,7 +11,8 @@
 #include <TCollection_HAsciiString.hxx>
 #include <Standard_Type.hxx>
 #include <Standard_Transient.hxx>
-
+#include <StepRepr_RepresentationRelationshipWithTransformation.hxx>
+#include <StepRepr_ItemDefinedTransformation.hxx>
 #include <unordered_map>
 #include <unordered_set>
 #include <queue>
@@ -20,6 +21,7 @@
 #include "step_tree.h"
 
 #include <gp_Ax1.hxx>
+#include <gp_Ax3.hxx>
 #include <StepGeom_Axis2Placement3D.hxx>
 #include <StepGeom_CartesianPoint.hxx>
 #include <StepGeom_Direction.hxx>
@@ -423,6 +425,78 @@ gp_Trsf GetTransformationMatrix(
     return transformation;
 }
 
+gp_Trsf ComputeTransformationFromAxis2Placement(const Handle(StepGeom_Axis2Placement3d)& placement)
+{
+    gp_Trsf transform;
+    if (!placement.IsNull())
+    {
+        // Extract translation
+        if (!placement->Location().IsNull())
+        {
+            auto loc = placement->Location();
+            transform.SetTranslation(gp_Vec(loc->CoordinatesValue(1), loc->CoordinatesValue(2), loc->CoordinatesValue(3)));
+        }
+
+        // Extract rotation from directions
+        if (!placement->RefDirection().IsNull() && !placement->Axis().IsNull())
+        {
+            gp_Dir xDir(placement->Axis()->DirectionRatiosValue(1),
+                        placement->Axis()->DirectionRatiosValue(2),
+                        placement->Axis()->DirectionRatiosValue(3));
+            gp_Dir zDir(placement->RefDirection()->DirectionRatiosValue(1),
+                        placement->RefDirection()->DirectionRatiosValue(2),
+                        placement->RefDirection()->DirectionRatiosValue(3));
+            gp_Ax3 localAxis(transform.TranslationPart(), zDir, xDir);
+            transform.SetTransformation(localAxis);
+        }
+    }
+    return transform;
+}
+
+
+gp_Trsf GetAssemblyInstanceTransformation(
+    const Handle(StepRepr_NextAssemblyUsageOccurrence)& nauo,
+    const Interface_Graph& theGraph)
+{
+    gp_Trsf transformation;
+
+    // Retrieve the ITEM_DEFINED_TRANSFORMATION (#749)
+    Interface_EntityIterator refs = theGraph.Sharings(nauo);
+    for (refs.Start(); refs.More(); refs.Next())
+    {
+        auto entity = refs.Value();
+        if (entity->IsKind(STANDARD_TYPE(StepRepr_RepresentationRelationshipWithTransformation)))
+        {
+            auto relWithTrans = Handle(StepRepr_RepresentationRelationshipWithTransformation)::DownCast(entity);
+            auto itemDefinedTrans = relWithTrans->TransformationOperator();
+            if (!itemDefinedTrans.IsNull())
+            {
+                auto itemDefTrans = itemDefinedTrans.ItemDefinedTransformation();
+                auto trans1 = itemDefTrans->TransformItem1();
+                auto trans2 = itemDefTrans->TransformItem2();
+                if (!trans1.IsNull() && !trans2.IsNull())
+                {
+                    // Get AXIS2_PLACEMENT_3D entities for parent and child
+                    auto childPlacement = Handle(StepGeom_Axis2Placement3d)::DownCast(trans1);
+                    auto parentPlacement = Handle(StepGeom_Axis2Placement3d)::DownCast(trans2);
+
+                    // Compute transformations
+                    if (!childPlacement.IsNull() && !parentPlacement.IsNull())
+                    {
+                        gp_Trsf childTransform = ComputeTransformationFromAxis2Placement(childPlacement);
+                        gp_Trsf parentTransform = ComputeTransformationFromAxis2Placement(parentPlacement);
+
+                        // Combine transformations: parent^-1 * child
+                        parentTransform.Invert();
+                        transformation = parentTransform * childTransform;
+                    }
+                }
+            }
+        }
+    }
+
+    return transformation;
+}
 
 // Recursive function that builds a ProductNode tree with transformations
 static ProductNode BuildProductNodeWithTransform(
@@ -454,11 +528,7 @@ static ProductNode BuildProductNodeWithTransform(
         if (entity->IsKind(STANDARD_TYPE(StepRepr_NextAssemblyUsageOccurrence)))
         {
             auto nauo = Handle(StepRepr_NextAssemblyUsageOccurrence)::DownCast(entity);
-            if (!nauo->RelatedProductDefinition().IsNull() && nauo->RelatedProductDefinition() == Handle(StepBasic_ProductDefinition)::DownCast(product))
-            {
-                localTransform = GetTransformationMatrix(nauo, theGraph);
-                break;
-            }
+            localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
         }
     }
 
