@@ -7,7 +7,7 @@
 #include <StepBasic_ProductDefinition.hxx>
 #include <StepBasic_ProductDefinitionFormation.hxx>
 #include <StepRepr_NextAssemblyUsageOccurrence.hxx>
-
+#include <StepRepr_ProductDefinitionShape.hxx>
 #include <TCollection_HAsciiString.hxx>
 #include <Standard_Type.hxx>
 #include <Standard_Transient.hxx>
@@ -18,6 +18,13 @@
 
 #include <sstream>
 #include "step_tree.h"
+
+#include <gp_Ax1.hxx>
+#include <StepGeom_Axis2Placement3D.hxx>
+#include <StepGeom_CartesianPoint.hxx>
+#include <StepGeom_Direction.hxx>
+
+#include "step_helpers.h"
 
 
 // Helper: given a Product, find its associated ProductDefinition (if any)
@@ -241,6 +248,18 @@ static void ProductNodeToJson(const ProductNode& node, std::ostream& os, int ind
     os << "\"name\": \"" << node.name << "\",\n";
 
     indent(indentLevel + 1);
+    os << "\"geometryIndices\": [";
+    for (size_t i = 0; i < node.geometryIndices.size(); i++)
+    {
+        os << node.geometryIndices[i];
+        if (i + 1 < node.geometryIndices.size())
+        {
+            os << ", ";
+        }
+    }
+    os << "],\n";
+
+    indent(indentLevel + 1);
     os << "\"children\": [\n";
     for (size_t i = 0; i < node.children.size(); i++)
     {
@@ -274,4 +293,127 @@ std::string ExportHierarchyToJson(const std::vector<ProductNode>& roots)
     oss << "]\n";
 
     return oss.str();
+}
+
+void add_geometries_to_nodes(std::vector<ProductNode> &nodes, const Interface_Graph &theGraph) {
+    for (auto &node : nodes) {
+        auto& product = theGraph.Entity(node.entityIndex);
+
+        Interface_EntityIterator breps =
+                Get_Associated_SolidModel_BiDirectional(product,
+                                                STANDARD_TYPE(StepShape_SolidModel),
+                                                theGraph);
+        // get the geometry indices
+        while (breps.More()) {
+            auto entity = breps.Value();
+            auto entityIndex = theGraph.Model()->Number(entity);
+            node.geometryIndices.push_back(entityIndex);
+            breps.Next();
+        }
+        if (!node.children.empty()) {
+            add_geometries_to_nodes(node.children, theGraph);
+        }
+    }
+}
+
+// Function to compute the transformation matrix for a given assembly instance
+gp_Trsf GetTransformationMatrix(
+    const Handle(StepRepr_NextAssemblyUsageOccurrence)& nauo,
+    const Interface_Graph& theGraph)
+{
+    gp_Trsf transformation;
+    Handle(StepBasic_ProductDefinition) relatedProdDef = nauo->RelatedProductDefinition();
+
+    // Check if the NAUO provides transformation data
+    if (!relatedShape.IsNull())
+    {
+        Interface_EntityIterator refs = theGraph.Sharings(relatedShape);
+        for (refs.Start(); refs.More(); refs.Next())
+        {
+            const Handle(Standard_Transient) refEntity = refs.Value();
+            if (refEntity->IsKind(STANDARD_TYPE(StepGeom_Axis2Placement3d)))
+            {
+                auto axisPlacement = Handle(StepGeom_Axis2Placement3d)::DownCast(refEntity);
+
+                // Extract location, direction, and orientation to create the transformation
+                if (!axisPlacement->Location().IsNull())
+                {
+                    auto location = axisPlacement->Location();
+                    transformation.SetTranslation(
+                        gp_Vec(location->CoordinatesValue(1), location->CoordinatesValue(2), location->CoordinatesValue(3)));
+                }
+
+                if (!axisPlacement->RefDirection().IsNull() &&
+                    !axisPlacement->Axis().IsNull())
+                {
+                    auto refDirection = axisPlacement->RefDirection();
+                    auto axis = axisPlacement->Axis();
+                    auto angle = refDirection->Angle(axis);
+
+                    transformation.SetRotation(
+                        gp_Ax1(gp_Pnt(0, 0, 0),
+                               gp_Dir(axis->DirectionRatiosValue(1), axis->DirectionRatiosValue(2), axis->DirectionRatiosValue(3))),
+                        angle);
+                }
+                break;
+            }
+        }
+    }
+    return transformation;
+}
+
+// Modified BuildProductNode to include transformation data
+static ProductNode BuildProductNodeWithTransform(
+    int productIndex,
+    const std::unordered_map<int, std::vector<int>>& parentToChildren,
+    const Handle(Interface_InterfaceModel)& model,
+    const gp_Trsf& parentTransform = gp_Trsf())
+{
+    ProductNode node;
+    node.entityIndex = productIndex;
+
+    Handle(Standard_Transient) ent = model->Value(productIndex);
+    auto product = Handle(StepBasic_Product)::DownCast(ent);
+    if (!product.IsNull() && !product->Name().IsNull())
+    {
+        node.name = product->Name()->ToCString();
+    }
+    else
+    {
+        node.name = "(unnamed product)";
+    }
+
+    // Get the transformation for this node
+    gp_Trsf currentTransform = parentTransform;
+
+    // Look for NextAssemblyUsageOccurrence related to this product
+    for (Standard_Integer i = 1; i <= model->NbEntities(); i++)
+    {
+        Handle(Standard_Transient) entity = model->Value(i);
+        if (entity->IsKind(STANDARD_TYPE(StepRepr_NextAssemblyUsageOccurrence)))
+        {
+            auto nauo = Handle(StepRepr_NextAssemblyUsageOccurrence)::DownCast(entity);
+            if (!nauo.IsNull() && nauo->RelatedProductDefinition() == product)
+            {
+                gp_Trsf localTransform = GetTransformationMatrix(nauo, model);
+                currentTransform.Multiply(localTransform);
+                break;
+            }
+        }
+    }
+
+    // Store transformation in the node
+    node.transformation = currentTransform; // Assuming ProductNode has a `gp_Trsf` member
+
+    // Recurse for children
+    auto it = parentToChildren.find(productIndex);
+    if (it != parentToChildren.end())
+    {
+        for (int childIdx : it->second)
+        {
+            node.children.push_back(
+                BuildProductNodeWithTransform(childIdx, parentToChildren, model, currentTransform));
+        }
+    }
+    return node;
 }

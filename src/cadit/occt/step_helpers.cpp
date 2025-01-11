@@ -671,8 +671,12 @@ Interface_EntityIterator Get_Associated_SolidModel_BiDirectional(
                         {
                             Handle(StepShape_SolidModel) solidModel =
                                 Handle(StepShape_SolidModel)::DownCast(repItem);
-
-                            matchedEntities->Append(solidModel);
+                            // append only if solidmodel is not already added. Can contain many geometries
+                            if (visited.find(model->Number(solidModel)) == visited.end())
+                            {
+                                visited.insert(model->Number(solidModel));
+                                matchedEntities->Append(solidModel);
+                            }
                         }
                     }
                 }

@@ -90,6 +90,7 @@ void stp_to_glb_v2(const GlobalConfig &config) {
 
     // Extract hierarchy
     std::vector<ProductNode> roots = ExtractProductHierarchy(model, theGraph);
+    add_geometries_to_nodes(roots, theGraph);
 
     // Use the iterator to get all shape entities
     AdaCPPStepWriter stp_writer = AdaCPPStepWriter("Assembly", roots);
