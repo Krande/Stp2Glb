@@ -22,6 +22,7 @@ struct ProductNode {
     int entityIndex;
     std::string name;
     std::vector<ProductNode> children;
+    int instanceIndex;
     // references to geometries
     std::vector<int> geometryIndices;
     TDF_Label targetIndex;

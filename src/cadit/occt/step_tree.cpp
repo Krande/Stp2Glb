@@ -162,39 +162,6 @@ BuildAssemblyLinks(const Handle(Interface_InterfaceModel)& model, const Interfac
     return parentToChildren;
 }
 
-// Recursive function that builds a ProductNode tree
-static ProductNode BuildProductNode(
-    int productIndex,
-    const std::unordered_map<int, std::vector<int>>& parentToChildren,
-    const Handle(Interface_InterfaceModel)& model)
-{
-    ProductNode node;
-    node.entityIndex = productIndex;
-
-    Handle(Standard_Transient) ent = model->Value(productIndex);
-    auto product = Handle(StepBasic_Product)::DownCast(ent);
-    if (!product.IsNull() && !product->Name().IsNull())
-    {
-        node.name = product->Name()->ToCString();
-    }
-    else
-    {
-        node.name = "(unnamed product)";
-    }
-
-    // Recurse for children
-    auto it = parentToChildren.find(productIndex);
-    if (it != parentToChildren.end())
-    {
-        for (int childIdx : it->second)
-        {
-            node.children.push_back(
-                BuildProductNode(childIdx, parentToChildren, model)
-            );
-        }
-    }
-    return node;
-}
 
 // Main function: extracts top-level ProductNode trees with transformations
 std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model,
@@ -284,6 +251,9 @@ static void ProductNodeToJson(const ProductNode& node, std::ostream& os, int ind
 
     indent(indentLevel + 1);
     os << "\"entityIndex\": " << node.entityIndex << ",\n";
+
+    indent(indentLevel + 1);
+    os << "\"InstanceIndex\": " << node.instanceIndex << ",\n";
 
     indent(indentLevel + 1);
     os << "\"targetIndex\": " << node.targetIndex.Tag() << ",\n";
@@ -540,6 +510,7 @@ Handle(StepRepr_NextAssemblyUsageOccurrence) Get_NextAssemblyUsageOccurrence(con
                                                                              const Interface_Graph& theGraph)
 {
     Handle(StepRepr_NextAssemblyUsageOccurrence) nauo;
+    std::vector<Handle(StepRepr_NextAssemblyUsageOccurrence)> nauos;
 
     Interface_EntityIterator childIter = theGraph.Sharings(product);
     for (childIter.Start(); childIter.More(); childIter.Next())
@@ -558,7 +529,8 @@ Handle(StepRepr_NextAssemblyUsageOccurrence) Get_NextAssemblyUsageOccurrence(con
                     {
                         if (pdIter.Value()->IsKind(STANDARD_TYPE(StepRepr_NextAssemblyUsageOccurrence)))
                         {
-                            return Handle(StepRepr_NextAssemblyUsageOccurrence)::DownCast(pdIter.Value());
+                            nauo = Handle(StepRepr_NextAssemblyUsageOccurrence)::DownCast(pdIter.Value());
+                            nauos.push_back(nauo);
                         }
                     }
                 }
@@ -582,6 +554,10 @@ static ProductNode BuildProductNodeWithTransform(
 
     const Handle(Standard_Transient) ent = model->Value(productIndex);
     const auto product = Handle(StepBasic_Product)::DownCast(ent);
+
+    // Compute the transformation for this node
+    auto nauo = Get_NextAssemblyUsageOccurrence(product, theGraph);
+
     if (!product.IsNull() && !product->Name().IsNull())
     {
         node.name = product->Name()->ToCString();
@@ -591,9 +567,9 @@ static ProductNode BuildProductNodeWithTransform(
         node.name = "(unnamed product)";
     }
 
-    // Compute the transformation for this node
-    auto nauo = Get_NextAssemblyUsageOccurrence(product, theGraph);
     gp_Trsf localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
+    // get the entity id of nauo
+    node.instanceIndex = theGraph.Model()->Number(nauo);
 
     // Combine parent transformation with local transformation
     gp_Trsf absoluteTransform = parentTransform;
