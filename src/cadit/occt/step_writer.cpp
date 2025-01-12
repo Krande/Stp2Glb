@@ -69,7 +69,7 @@ void AdaCPPStepWriter::export_step(const std::filesystem::path &step_file) const
         create_directories(step_file.parent_path());
     }
 
-    Handle(XSControl_WorkSession) session = new XSControl_WorkSession();
+    const Handle(XSControl_WorkSession) session = new XSControl_WorkSession();
 
     STEPCAFControl_Writer writer(session, Standard_False);
     writer.SetColorMode(Standard_True);

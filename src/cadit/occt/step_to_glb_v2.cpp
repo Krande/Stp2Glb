@@ -9,7 +9,7 @@
 #include <StepData_StepModel.hxx>
 #include <Interface_EntityIterator.hxx>
 #include <BRepBuilderAPI_MakeShape.hxx>
-#include <StepRepr_ProductDefinitionShape.hxx>
+#include "geometry_iterator.h"
 #include <iostream>
 #include "step_to_glb_v2.h"
 
@@ -19,7 +19,6 @@
 #include <Interface_Static.hxx>
 #include <Interface_Graph.hxx>
 #include <StepBasic_Product.hxx>
-#include <StepShape_ShapeDefinitionRepresentation.hxx>
 #include <TDataStd_Name.hxx>
 
 #include "gltf_writer.h"
@@ -28,7 +27,8 @@
 #include "../../config_structs.h"
 
 
-void stp_to_glb_v2(const GlobalConfig &config) {
+void stp_to_glb_v2(const GlobalConfig& config)
+{
     // Initialize the STEPCAFControl_Reader
     STEPCAFControl_Reader reader;
     Interface_Static::SetIVal("FromSTEP.FixShape.FixShellOrientationMode", 0);
@@ -99,78 +99,39 @@ void stp_to_glb_v2(const GlobalConfig &config) {
     std::string jsonOutput = ExportHierarchyToJson(roots);
 
     // Then write to file or print to console:
-    const std::filesystem::path out_json_file = config.glbFile.parent_path() / config.glbFile.stem().concat("-hierarchy.json");
+    const std::filesystem::path out_json_file = config.glbFile.parent_path() / config.glbFile.stem().concat(
+        "-hierarchy.json");
     std::ofstream file(out_json_file);
     file << jsonOutput;
     file.close();
 
     std::cout << "Hierarchy exported to assembly_hierarchy.json\n";
 
-    while (iterator.More()) {
-        auto const &entity = iterator.Value();
+    // Iterate over all nodes with geometry indices
+    for (const auto& node : GeometryRange(roots))
+    {
+        Handle(StepBasic_Product) product = Handle(StepBasic_Product)::DownCast(model->Entity(node.entityIndex));
 
-        // Get the integer index for the entity
-        Standard_Integer entityIndex = model->IdentLabel(entity);
+        std::cout << "Node: " << node.name
+            << ", EntityIndex: " << node.entityIndex
+            << ", Geometry count: " << node.geometryIndices.size() << '\n';
 
-        // Detect if this entity is a StepBasic_Product
-        if (!entity->IsKind(STANDARD_TYPE(StepBasic_Product)))
+        for (int geometryIndex : node.geometryIndices)
         {
-            iterator.Next();
-            continue;
-        };
-        auto product = Handle(StepBasic_Product)::DownCast(entity);
-        if (product.IsNull()) {
-            iterator.Next();
-            continue;
-        };
-
-        auto prod_name = std::string(product->Name()->ToCString());
-
-        std::cout
-                << "\nEntity " << entityIndex
-                << " is a StepBasic_Product named: "
-                << product->Name()->ToCString() << "\n";
-
-        // Recursively find all StepShape_ManifoldSolidBrep in subgraph
-        Interface_EntityIterator breps =
-                Get_Associated_SolidModel_BiDirectional(product,
-                                                STANDARD_TYPE(StepShape_SolidModel),
-                                                theGraph);
-
-        std::cout << "  Found " << breps.NbEntities()
-                << " manifold solid B-rep(s)\n";
-
-        // Print them
-        for (breps.Start(); breps.More(); breps.Next()) {
-            Handle(Standard_Transient) foundBrep = breps.Value();
-            std::cout << "    -> "
-                    << foundBrep->DynamicType()->Name() << "\n";
-
-            ConvertObject cobject = entity_to_shape(foundBrep, default_reader, shape_tool, meshParams,
-                                                    config.solidOnly);
+            auto brep = model->Entity(geometryIndex);
+            ConvertObject cobject = entity_to_shape(brep, default_reader, shape_tool, meshParams, config.solidOnly);
             TopoDS_Shape shape = cobject.shape;
-
-            if (shape.IsNull()) {
-                iterator.Next();
-                continue;
-            };
 
             TDF_Label shape_label;
 
-            // Apply the location (transformation) to the shape
-            update_location(shape);
+            cobject.name = node.name;
 
-            // Add any additional location transformations from product to shape
-            auto trsf = get_product_transform(shape, product);
-            BRepBuilderAPI_Transform shapeTransform(trsf);
-            shapeTransform.Perform(shape, Standard_False);
-
-            cobject.name = prod_name;
-
-            if (!config.filter_names.empty()) {
+            if (!config.filter_names.empty())
+            {
                 auto vector_contains = check_if_string_in_vector(config.filter_names, cobject.name);
 
-                if (!vector_contains) {
+                if (!vector_contains)
+                {
                     iterator.Next();
                     continue;
                 }
@@ -189,31 +150,40 @@ void stp_to_glb_v2(const GlobalConfig &config) {
                 shape_label = shape_tool->AddShape(shape);
             }
 
-            if (!shape_label.IsNull()) {
+            if (!shape_label.IsNull())
+            {
                 std::cout << "Shape added to the document successfully!" << "\n";
                 cobject.shape_label = shape_label;
-            } else {
+            }
+            else
+            {
                 std::cerr << "Failed to add shape to the document." << "\n";
             }
 
             TDataStd_Name::Set(cobject.shape_label, cobject.name.c_str());
 
-            std::cout << "Adding Shape: " << cobject.name << " (Entity: " << entityIndex << ")\n";
+            std::cout << "Adding Shape: " << cobject.name << " (Entity: " << node.entityIndex << ")\n";
             // no forced flush
             auto color = random_color();
 
-            stp_writer.add_shape(shape, cobject.name, color, prod_name);
+            // Add any additional location transformations from product to shape
+            BRepBuilderAPI_Transform shapeTransform(node.transformation);
+            shapeTransform.Perform(shape, Standard_False);
 
+            stp_writer.add_shape(shape, cobject.name, color, node.name);
+
+            curr_shape++;
+            if (config.max_geometry_num != 0 && curr_shape >= config.max_geometry_num)
+            {
+
+                break;
+            }
         }
-        curr_shape++;
-        if (config.max_geometry_num != 0 && curr_shape >= config.max_geometry_num) {
-            break;
-        }
-        iterator.Next();
     }
 
     // Write to GLB
-    std::cout << "Writing to GLB file: " << config.stpFile << "\n"; {
+    std::cout << "Writing to GLB file: " << config.stpFile << "\n";
+    {
         TIME_BLOCK("Writing to GLB file");
         to_glb_from_doc(config.glbFile, doc);
     }

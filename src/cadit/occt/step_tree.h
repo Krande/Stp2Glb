@@ -10,6 +10,11 @@
 #include <Interface_Graph.hxx>
 #include <Standard_Handle.hxx>  // For Handle
 #include <StepRepr_NextAssemblyUsageOccurrence.hxx>
+#include <coroutine>
+#include <string>
+#include <vector>
+#include <unordered_map>
+
 
 // Our struct from above
 struct ProductNode {
@@ -19,6 +24,15 @@ struct ProductNode {
     // references to geometries
     std::vector<int> geometryIndices;
     gp_Trsf transformation;
+
+    void collectNodesWithGeometry(std::vector<const ProductNode*>& result) const {
+        if (!geometryIndices.empty()) {
+            result.push_back(this);
+        }
+        for (const auto& child : children) {
+            child.collectNodesWithGeometry(result);
+        }
+    }
 };
 
 std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model, const Interface_Graph& theGraph);

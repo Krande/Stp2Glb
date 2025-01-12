@@ -13,6 +13,8 @@
 #include <Standard_Transient.hxx>
 #include <StepRepr_RepresentationRelationshipWithTransformation.hxx>
 #include <StepRepr_ItemDefinedTransformation.hxx>
+#include <StepRepr_Transformation.hxx>
+#include <StepShape_ContextDependentShapeRepresentation.hxx>
 #include <unordered_map>
 #include <unordered_set>
 #include <queue>
@@ -339,6 +341,7 @@ std::string ExportHierarchyToJson(const std::vector<ProductNode>& roots)
 
 void add_geometries_to_nodes(std::vector<ProductNode> &nodes, const Interface_Graph &theGraph) {
     for (auto &node : nodes) {
+
         auto& product = theGraph.Entity(node.entityIndex);
         Interface_EntityIterator breps =
                 Get_Associated_SolidModel_BiDirectional(product,
@@ -346,7 +349,7 @@ void add_geometries_to_nodes(std::vector<ProductNode> &nodes, const Interface_Gr
                                                 theGraph);
         // get the geometry indices
         while (breps.More()) {
-            auto entity = breps.Value();
+            const auto& entity = breps.Value();
             auto entityIndex = theGraph.Model()->Number(entity);
             node.geometryIndices.push_back(entityIndex);
             breps.Next();
@@ -433,7 +436,7 @@ gp_Trsf ComputeTransformationFromAxis2Placement(const Handle(StepGeom_Axis2Place
         // Extract translation
         if (!placement->Location().IsNull())
         {
-            auto loc = placement->Location();
+            const auto loc = placement->Location();
             transform.SetTranslation(gp_Vec(loc->CoordinatesValue(1), loc->CoordinatesValue(2), loc->CoordinatesValue(3)));
         }
 
@@ -453,6 +456,36 @@ gp_Trsf ComputeTransformationFromAxis2Placement(const Handle(StepGeom_Axis2Place
     return transform;
 }
 
+gp_Trsf GetTransformFromShapeRelWithTrans(const Handle(StepRepr_RepresentationRelationshipWithTransformation)& relWithTrans)
+{
+    gp_Trsf transformation;
+    auto itemDefinedTrans = relWithTrans->TransformationOperator();
+    if (!itemDefinedTrans.IsNull())
+    {
+        auto itemDefTrans = itemDefinedTrans.ItemDefinedTransformation();
+        auto trans1 = itemDefTrans->TransformItem1();
+        auto trans2 = itemDefTrans->TransformItem2();
+        if (!trans1.IsNull() && !trans2.IsNull())
+        {
+            // Get AXIS2_PLACEMENT_3D entities for parent and child
+            auto childPlacement = Handle(StepGeom_Axis2Placement3d)::DownCast(trans1);
+            auto parentPlacement = Handle(StepGeom_Axis2Placement3d)::DownCast(trans2);
+
+            // Compute transformations
+            if (!childPlacement.IsNull() && !parentPlacement.IsNull())
+            {
+                gp_Trsf childTransform = ComputeTransformationFromAxis2Placement(childPlacement);
+                gp_Trsf parentTransform = ComputeTransformationFromAxis2Placement(parentPlacement);
+
+                // Combine transformations: parent^-1 * child
+                parentTransform.Invert();
+                transformation = parentTransform * childTransform;
+            }
+        }
+    }
+    return transformation;
+}
+
 
 gp_Trsf GetAssemblyInstanceTransformation(
     const Handle(StepRepr_NextAssemblyUsageOccurrence)& nauo,
@@ -460,35 +493,26 @@ gp_Trsf GetAssemblyInstanceTransformation(
 {
     gp_Trsf transformation;
 
-    // Retrieve the ITEM_DEFINED_TRANSFORMATION (#749)
-    Interface_EntityIterator refs = theGraph.Sharings(nauo);
+    const Interface_EntityIterator refs = theGraph.Sharings(nauo);
     for (refs.Start(); refs.More(); refs.Next())
     {
-        auto entity = refs.Value();
-        if (entity->IsKind(STANDARD_TYPE(StepRepr_RepresentationRelationshipWithTransformation)))
+        const auto& entity = refs.Value();
+        if (entity->IsKind(STANDARD_TYPE(StepRepr_ProductDefinitionShape)))
         {
-            auto relWithTrans = Handle(StepRepr_RepresentationRelationshipWithTransformation)::DownCast(entity);
-            auto itemDefinedTrans = relWithTrans->TransformationOperator();
-            if (!itemDefinedTrans.IsNull())
+            auto pds = Handle(StepRepr_ProductDefinitionShape)::DownCast(entity);
+            Interface_EntityIterator pdsRefs = theGraph.Sharings(pds);
+            for (pdsRefs.Start(); pdsRefs.More(); pdsRefs.Next())
             {
-                auto itemDefTrans = itemDefinedTrans.ItemDefinedTransformation();
-                auto trans1 = itemDefTrans->TransformItem1();
-                auto trans2 = itemDefTrans->TransformItem2();
-                if (!trans1.IsNull() && !trans2.IsNull())
+                const auto& pdsRef = pdsRefs.Value();
+                if (pdsRef->IsKind(STANDARD_TYPE(StepShape_ContextDependentShapeRepresentation)))
                 {
-                    // Get AXIS2_PLACEMENT_3D entities for parent and child
-                    auto childPlacement = Handle(StepGeom_Axis2Placement3d)::DownCast(trans1);
-                    auto parentPlacement = Handle(StepGeom_Axis2Placement3d)::DownCast(trans2);
-
-                    // Compute transformations
-                    if (!childPlacement.IsNull() && !parentPlacement.IsNull())
+                    auto contextDependentShape = Handle(StepShape_ContextDependentShapeRepresentation)::DownCast(pdsRef);
+                    auto r1 = contextDependentShape->RepresentationRelation();
+                    auto r2 = contextDependentShape->RepresentedProductRelation();
+                    if (!r1.IsNull() && r1->IsKind(STANDARD_TYPE(StepRepr_RepresentationRelationshipWithTransformation)))
                     {
-                        gp_Trsf childTransform = ComputeTransformationFromAxis2Placement(childPlacement);
-                        gp_Trsf parentTransform = ComputeTransformationFromAxis2Placement(parentPlacement);
-
-                        // Combine transformations: parent^-1 * child
-                        parentTransform.Invert();
-                        transformation = parentTransform * childTransform;
+                        auto relWithTrans = Handle(StepRepr_RepresentationRelationshipWithTransformation)::DownCast(r1);
+                        return GetTransformFromShapeRelWithTrans(relWithTrans);
                     }
                 }
             }
@@ -497,7 +521,38 @@ gp_Trsf GetAssemblyInstanceTransformation(
 
     return transformation;
 }
+Handle(StepRepr_NextAssemblyUsageOccurrence) Get_NextAssemblyUsageOccurrence(const Handle(StepBasic_Product)& product,
+                                                                     const Interface_Graph& theGraph)
+{
+    Handle(StepRepr_NextAssemblyUsageOccurrence) nauo;
 
+    Interface_EntityIterator childIter = theGraph.Sharings(product);
+    for (childIter.Start(); childIter.More(); childIter.Next())
+    {
+        if (childIter.Value()->IsKind(STANDARD_TYPE(StepBasic_ProductDefinitionFormation)))
+        {
+            auto pdf = Handle(StepBasic_ProductDefinitionFormation)::DownCast(childIter.Value());
+            Interface_EntityIterator pdfIter = theGraph.Sharings(pdf);
+            for (pdfIter.Start(); pdfIter.More(); pdfIter.Next())
+            {
+                if (pdfIter.Value()->IsKind(STANDARD_TYPE(StepBasic_ProductDefinition)))
+                {
+                    auto pd = Handle(StepBasic_ProductDefinition)::DownCast(pdfIter.Value());
+                    Interface_EntityIterator pdIter = theGraph.Sharings(pd);
+                    for (pdIter.Start(); pdIter.More(); pdIter.Next())
+                    {
+                        if (pdIter.Value()->IsKind(STANDARD_TYPE(StepRepr_NextAssemblyUsageOccurrence)))
+                        {
+                            return Handle(StepRepr_NextAssemblyUsageOccurrence)::DownCast(pdIter.Value());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return nauo;
+}
 // Recursive function that builds a ProductNode tree with transformations
 static ProductNode BuildProductNodeWithTransform(
     int productIndex,
@@ -510,7 +565,7 @@ static ProductNode BuildProductNodeWithTransform(
     node.entityIndex = productIndex;
 
     Handle(Standard_Transient) ent = model->Value(productIndex);
-    auto product = Handle(StepBasic_Product)::DownCast(ent);
+    const auto product = Handle(StepBasic_Product)::DownCast(ent);
     if (!product.IsNull() && !product->Name().IsNull())
     {
         node.name = product->Name()->ToCString();
@@ -522,15 +577,8 @@ static ProductNode BuildProductNodeWithTransform(
 
     // Compute the transformation for this node
     gp_Trsf localTransform;
-    for (Standard_Integer i = 1; i <= model->NbEntities(); i++)
-    {
-        Handle(Standard_Transient) entity = model->Value(i);
-        if (entity->IsKind(STANDARD_TYPE(StepRepr_NextAssemblyUsageOccurrence)))
-        {
-            auto nauo = Handle(StepRepr_NextAssemblyUsageOccurrence)::DownCast(entity);
-            localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
-        }
-    }
+    auto nauo = Get_NextAssemblyUsageOccurrence(product, theGraph);
+    localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
 
     // Combine parent transformation with local transformation
     gp_Trsf absoluteTransform = parentTransform;
@@ -547,5 +595,6 @@ static ProductNode BuildProductNodeWithTransform(
                 BuildProductNodeWithTransform(childIdx, parentToChildren, model, theGraph, absoluteTransform));
         }
     }
+
     return node;
 }

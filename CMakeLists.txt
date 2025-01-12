@@ -84,6 +84,7 @@ set(HEADERS
         src/cadit/occt/bsplinesurf.h
         src/cadit/occt/helpers.h
         src/cadit/occt/step_writer.h
+        src/cadit/occt/geometry_iterator.h
 )
 
 add_executable(STP2GLB ${SOURCES} ${HEADERS})
