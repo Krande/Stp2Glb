@@ -166,16 +166,13 @@ void stp_to_glb_v2(const GlobalConfig& config)
             // no forced flush
             auto color = random_color();
 
-            // Add any additional location transformations from product to shape
-            BRepBuilderAPI_Transform shapeTransform(node.transformation);
-            shapeTransform.Perform(shape, Standard_False);
 
-            stp_writer.add_shape(shape, cobject.name, color, node.name);
+
+            stp_writer.add_shape(shape, cobject.name, color, node);
 
             curr_shape++;
             if (config.max_geometry_num != 0 && curr_shape >= config.max_geometry_num)
             {
-
                 break;
             }
         }

@@ -45,9 +45,11 @@ static Handle(StepBasic_ProductDefinition) FindProductDefinition(
     Handle(StepBasic_ProductDefinitionFormation) formation;
     {
         Interface_EntityIterator childIter = theGraph.Sharings(product);
-        for (childIter.Start(); childIter.More(); childIter.Next()) {
+        for (childIter.Start(); childIter.More(); childIter.Next())
+        {
             Handle(Standard_Transient) ent = childIter.Value();
-            if (ent->IsKind(STANDARD_TYPE(StepBasic_ProductDefinitionFormation))) {
+            if (ent->IsKind(STANDARD_TYPE(StepBasic_ProductDefinitionFormation)))
+            {
                 formation = Handle(StepBasic_ProductDefinitionFormation)::DownCast(ent);
                 break;
             }
@@ -68,7 +70,6 @@ static Handle(StepBasic_ProductDefinition) FindProductDefinition(
                 return Handle(StepBasic_ProductDefinition)::DownCast(ent);
             }
         }
-
     }
     // The ProductDefinition we want references this formation
     for (Standard_Integer i = 1; i <= model->NbEntities(); i++)
@@ -196,7 +197,8 @@ static ProductNode BuildProductNode(
 }
 
 // Main function: extracts top-level ProductNode trees with transformations
-std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model, const Interface_Graph& theGraph)
+std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model,
+                                                 const Interface_Graph& theGraph)
 {
     // 1) Build the map of parent->children relationships
     auto parentToChildren = BuildAssemblyLinks(model, theGraph);
@@ -284,6 +286,9 @@ static void ProductNodeToJson(const ProductNode& node, std::ostream& os, int ind
     os << "\"entityIndex\": " << node.entityIndex << ",\n";
 
     indent(indentLevel + 1);
+    os << "\"targetIndex\": " << node.targetIndex.Tag() << ",\n";
+
+    indent(indentLevel + 1);
     os << "\"name\": \"" << node.name << "\",\n";
 
     indent(indentLevel + 1);
@@ -339,22 +344,25 @@ std::string ExportHierarchyToJson(const std::vector<ProductNode>& roots)
     return oss.str();
 }
 
-void add_geometries_to_nodes(std::vector<ProductNode> &nodes, const Interface_Graph &theGraph) {
-    for (auto &node : nodes) {
-
+void add_geometries_to_nodes(std::vector<ProductNode>& nodes, const Interface_Graph& theGraph)
+{
+    for (auto& node : nodes)
+    {
         auto& product = theGraph.Entity(node.entityIndex);
         Interface_EntityIterator breps =
-                Get_Associated_SolidModel_BiDirectional(product,
-                                                STANDARD_TYPE(StepShape_SolidModel),
-                                                theGraph);
+            Get_Associated_SolidModel_BiDirectional(product,
+                                                    STANDARD_TYPE(StepShape_SolidModel),
+                                                    theGraph);
         // get the geometry indices
-        while (breps.More()) {
+        while (breps.More())
+        {
             const auto& entity = breps.Value();
             auto entityIndex = theGraph.Model()->Number(entity);
             node.geometryIndices.push_back(entityIndex);
             breps.Next();
         }
-        if (!node.children.empty()) {
+        if (!node.children.empty())
+        {
             add_geometries_to_nodes(node.children, theGraph);
         }
     }
@@ -407,7 +415,8 @@ gp_Trsf GetTransformationMatrix(
             {
                 auto location = axisPlacement->Location();
                 transformation.SetTranslation(
-                    gp_Vec(location->CoordinatesValue(1), location->CoordinatesValue(2), location->CoordinatesValue(3)));
+                    gp_Vec(location->CoordinatesValue(1), location->CoordinatesValue(2),
+                           location->CoordinatesValue(3)));
             }
 
             // Extract rotation
@@ -419,7 +428,8 @@ gp_Trsf GetTransformationMatrix(
 
                 transformation.SetRotation(
                     gp_Ax1(gp_Pnt(0, 0, 0),
-                           gp_Dir(axis->DirectionRatiosValue(1), axis->DirectionRatiosValue(2), axis->DirectionRatiosValue(3))),
+                           gp_Dir(axis->DirectionRatiosValue(1), axis->DirectionRatiosValue(2),
+                                  axis->DirectionRatiosValue(3))),
                     angle);
             }
             break;
@@ -437,7 +447,8 @@ gp_Trsf ComputeTransformationFromAxis2Placement(const Handle(StepGeom_Axis2Place
         if (!placement->Location().IsNull())
         {
             const auto loc = placement->Location();
-            transform.SetTranslation(gp_Vec(loc->CoordinatesValue(1), loc->CoordinatesValue(2), loc->CoordinatesValue(3)));
+            transform.SetTranslation(gp_Vec(loc->CoordinatesValue(1), loc->CoordinatesValue(2),
+                                            loc->CoordinatesValue(3)));
         }
 
         // Extract rotation from directions
@@ -456,7 +467,8 @@ gp_Trsf ComputeTransformationFromAxis2Placement(const Handle(StepGeom_Axis2Place
     return transform;
 }
 
-gp_Trsf GetTransformFromShapeRelWithTrans(const Handle(StepRepr_RepresentationRelationshipWithTransformation)& relWithTrans)
+gp_Trsf GetTransformFromShapeRelWithTrans(
+    const Handle(StepRepr_RepresentationRelationshipWithTransformation)& relWithTrans)
 {
     gp_Trsf transformation;
     auto itemDefinedTrans = relWithTrans->TransformationOperator();
@@ -506,10 +518,12 @@ gp_Trsf GetAssemblyInstanceTransformation(
                 const auto& pdsRef = pdsRefs.Value();
                 if (pdsRef->IsKind(STANDARD_TYPE(StepShape_ContextDependentShapeRepresentation)))
                 {
-                    auto contextDependentShape = Handle(StepShape_ContextDependentShapeRepresentation)::DownCast(pdsRef);
+                    auto contextDependentShape =
+                        Handle(StepShape_ContextDependentShapeRepresentation)::DownCast(pdsRef);
                     auto r1 = contextDependentShape->RepresentationRelation();
                     auto r2 = contextDependentShape->RepresentedProductRelation();
-                    if (!r1.IsNull() && r1->IsKind(STANDARD_TYPE(StepRepr_RepresentationRelationshipWithTransformation)))
+                    if (!r1.IsNull() && r1->
+                        IsKind(STANDARD_TYPE(StepRepr_RepresentationRelationshipWithTransformation)))
                     {
                         auto relWithTrans = Handle(StepRepr_RepresentationRelationshipWithTransformation)::DownCast(r1);
                         return GetTransformFromShapeRelWithTrans(relWithTrans);
@@ -521,8 +535,9 @@ gp_Trsf GetAssemblyInstanceTransformation(
 
     return transformation;
 }
+
 Handle(StepRepr_NextAssemblyUsageOccurrence) Get_NextAssemblyUsageOccurrence(const Handle(StepBasic_Product)& product,
-                                                                     const Interface_Graph& theGraph)
+                                                                             const Interface_Graph& theGraph)
 {
     Handle(StepRepr_NextAssemblyUsageOccurrence) nauo;
 
@@ -553,6 +568,7 @@ Handle(StepRepr_NextAssemblyUsageOccurrence) Get_NextAssemblyUsageOccurrence(con
 
     return nauo;
 }
+
 // Recursive function that builds a ProductNode tree with transformations
 static ProductNode BuildProductNodeWithTransform(
     int productIndex,
@@ -564,7 +580,7 @@ static ProductNode BuildProductNodeWithTransform(
     ProductNode node;
     node.entityIndex = productIndex;
 
-    Handle(Standard_Transient) ent = model->Value(productIndex);
+    const Handle(Standard_Transient) ent = model->Value(productIndex);
     const auto product = Handle(StepBasic_Product)::DownCast(ent);
     if (!product.IsNull() && !product->Name().IsNull())
     {
@@ -576,9 +592,8 @@ static ProductNode BuildProductNodeWithTransform(
     }
 
     // Compute the transformation for this node
-    gp_Trsf localTransform;
     auto nauo = Get_NextAssemblyUsageOccurrence(product, theGraph);
-    localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
+    gp_Trsf localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
 
     // Combine parent transformation with local transformation
     gp_Trsf absoluteTransform = parentTransform;

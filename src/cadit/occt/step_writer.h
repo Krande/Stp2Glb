@@ -23,10 +23,10 @@ class AdaCPPStepWriter {
 public:
     explicit AdaCPPStepWriter(const std::string& top_level_name = "Assembly");
 
-    AdaCPPStepWriter(const std::string& top_level_name, const std::vector<ProductNode>& product_hierarchy);
+    AdaCPPStepWriter(const std::string& top_level_name, std::vector<ProductNode>& product_hierarchy);
 
     void add_shape(const TopoDS_Shape& shape, const std::string& name, const Color& rgb_color,
-        const std::string& parent_product_name = "", const TDF_Label& parent = TDF_Label());
+        const ProductNode& parent_product_entity_index, const TDF_Label& parent = TDF_Label());
 
     void export_step(const std::filesystem::path& step_file) const;
 
@@ -45,8 +45,11 @@ private:
     // Map to store product name to TDF_Label mapping for hierarchy
     std::unordered_map<std::string, TDF_Label> product_labels_;
 
+    // Map to store source entity index to TDF_Label mapping for shapes
+    std::unordered_map<int, TDF_Label> entity_labels_;
+
     void initialize(const std::string& top_level_name);
-    void create_hierarchy(const std::vector<ProductNode>& nodes, const TDF_Label& parent_label);
+    void create_hierarchy(std::vector<ProductNode> &nodes, const TDF_Label &parent_label);
     static void set_name(const TDF_Label& label, const std::string& name);
     static void set_color(const TDF_Label& label, const Color& rgb_color, const Handle(XCAFDoc_ColorTool)& color_tool);
 };

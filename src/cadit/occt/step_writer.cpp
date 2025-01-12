@@ -1,5 +1,6 @@
 #include "step_writer.h"
 
+#include <BRepBuilderAPI_Transform.hxx>
 #include <iostream>
 #include <filesystem>
 
@@ -30,33 +31,31 @@ AdaCPPStepWriter::AdaCPPStepWriter(const std::string &top_level_name) {
 }
 
 // Constructor with product hierarchy
-AdaCPPStepWriter::AdaCPPStepWriter(const std::string &top_level_name, const std::vector<ProductNode> &product_hierarchy) {
+AdaCPPStepWriter::AdaCPPStepWriter(const std::string &top_level_name, std::vector<ProductNode> &product_hierarchy) {
     initialize(top_level_name);
     create_hierarchy(product_hierarchy, tll_);
 }
 
 // Add a shape
 void AdaCPPStepWriter::add_shape(const TopoDS_Shape &shape, const std::string &name,
-                                 const Color &rgb_color, const std::string &parent_product_name,
+                                 const Color &rgb_color, const ProductNode &parent_product,
                                  const TDF_Label &parent) {
-    TDF_Label parent_label;
-    comp_builder_.Add(comp_, shape);
 
-    if (parent_product_name.empty()) {
-        parent_label = parent.IsNull() ? tll_ : parent;
-    } else if (product_labels_.find(parent_product_name) != product_labels_.end()) {
-        parent_label = product_labels_[parent_product_name];
-    } else {
-        throw std::runtime_error("Parent product not found: " + parent_product_name);
+    TDF_Label parent_label = entity_labels_[parent_product.entityIndex];
+    if (parent_label.IsNull()) {
+        throw std::runtime_error("Parent product not found: " + parent_product.name);
     }
-
-    TDF_Label shape_label = shape_tool_->AddComponent(parent_label, shape);
-    if (shape_label.IsNull()) {
-        shape_label = shape_tool_->AddShape(shape, Standard_False, Standard_False);
-    }
+    auto location = TopLoc_Location(parent_product.transformation);
+    TDF_Label shape_label = shape_tool_->AddShape(shape, Standard_False, Standard_False);
+    shape_tool_->AddComponent(parent_label, shape_label, location);
 
     set_color(shape_label, rgb_color, color_tool_);
     set_name(shape_label, name);
+    auto new_shape = shape_tool_->GetShape(shape_label);
+
+    // Add any additional location transformations from product to shape
+    BRepBuilderAPI_Transform shapeTransform(parent_product.transformation);
+    shapeTransform.Perform(new_shape, Standard_False);
 
 }
 
@@ -108,13 +107,15 @@ void AdaCPPStepWriter::initialize(const std::string &top_level_name) {
 }
 
 // Create a hierarchy of products
-void AdaCPPStepWriter::create_hierarchy(const std::vector<ProductNode> &nodes, const TDF_Label &parent_label) {
-    for (const auto &node : nodes) {
+void AdaCPPStepWriter::create_hierarchy(std::vector<ProductNode> &nodes, const TDF_Label &parent_label) {
+    for (auto &node : nodes) {
 
         TDF_Label child_label = shape_tool_->NewShape();
-        shape_tool_->AddComponent(parent_label, child_label, TopLoc_Location());
+        auto target_label = shape_tool_->AddComponent(parent_label, child_label, TopLoc_Location());
         set_name(child_label, node.name);
         product_labels_[node.name] = child_label;
+        entity_labels_[node.entityIndex] = child_label;
+        node.targetIndex = target_label;
 
         if (!node.children.empty()) {
             create_hierarchy(node.children, child_label);

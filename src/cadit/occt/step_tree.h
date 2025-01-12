@@ -12,6 +12,7 @@
 #include <StepRepr_NextAssemblyUsageOccurrence.hxx>
 #include <coroutine>
 #include <string>
+#include <TDF_Label.hxx>
 #include <vector>
 #include <unordered_map>
 
@@ -23,6 +24,7 @@ struct ProductNode {
     std::vector<ProductNode> children;
     // references to geometries
     std::vector<int> geometryIndices;
+    TDF_Label targetIndex;
     gp_Trsf transformation;
 
     void collectNodesWithGeometry(std::vector<const ProductNode*>& result) const {
