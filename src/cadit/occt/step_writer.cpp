@@ -31,7 +31,7 @@ AdaCPPStepWriter::AdaCPPStepWriter(const std::string &top_level_name) {
 }
 
 // Constructor with product hierarchy
-AdaCPPStepWriter::AdaCPPStepWriter(const std::string &top_level_name, std::vector<ProductNode> &product_hierarchy) {
+AdaCPPStepWriter::AdaCPPStepWriter(const std::string &top_level_name, std::vector<std::unique_ptr<ProductNode>> &product_hierarchy) {
     initialize(top_level_name);
     create_hierarchy(product_hierarchy, tll_);
 }
@@ -107,18 +107,18 @@ void AdaCPPStepWriter::initialize(const std::string &top_level_name) {
 }
 
 // Create a hierarchy of products
-void AdaCPPStepWriter::create_hierarchy(std::vector<ProductNode> &nodes, const TDF_Label &parent_label) {
+void AdaCPPStepWriter::create_hierarchy(std::vector<std::unique_ptr<ProductNode>> &nodes, const TDF_Label &parent_label) {
     for (auto &node : nodes) {
 
         TDF_Label child_label = shape_tool_->NewShape();
         auto target_label = shape_tool_->AddComponent(parent_label, child_label, TopLoc_Location());
-        set_name(child_label, node.name);
-        product_labels_[node.name] = child_label;
-        entity_labels_[node.entityIndex] = child_label;
-        node.targetIndex = target_label;
+        set_name(child_label, node->name);
+        product_labels_[node->name] = child_label;
+        entity_labels_[node->entityIndex] = child_label;
+        node->targetIndex = target_label;
 
-        if (!node.children.empty()) {
-            create_hierarchy(node.children, child_label);
+        if (!node->children.empty()) {
+            create_hierarchy(node->children, child_label);
         }
     }
 }

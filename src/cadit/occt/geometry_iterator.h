@@ -1,7 +1,3 @@
-//
-// Created by Kristoffer on 12.01.2025.
-//
-
 #ifndef GEOMETRY_ITERATOR_HPP
 #define GEOMETRY_ITERATOR_HPP
 
@@ -18,7 +14,7 @@ public:
     using iterator_category = std::input_iterator_tag;
     using difference_type = std::ptrdiff_t;
 
-    // Constructor: Initialize with root node
+    // Constructor: Initialize with a pointer to the root node
     explicit GeometryIterator(pointer root) {
         if (root) {
             stack.emplace(root, 0);
@@ -30,60 +26,70 @@ public:
     GeometryIterator() = default;
 
     // Dereference operator
-    reference operator*() const { return *stack.top().first; }
+    reference operator*() const { 
+        return *stack.top().first; 
+    }
 
-    // Pointer operator
-    pointer operator->() const { return stack.top().first; }
+    // Arrow operator
+    pointer operator->() const { 
+        return stack.top().first; 
+    }
 
-    // Pre-increment operator
+    // Pre-increment
     GeometryIterator& operator++() {
         stack.top().second++;
         advanceToNextValid();
         return *this;
     }
 
-    // Post-increment operator
+    // Post-increment
     GeometryIterator operator++(int) {
         GeometryIterator temp = *this;
         ++(*this);
         return temp;
     }
 
-    // Equality comparison
+    // Equality
     bool operator==(const GeometryIterator& other) const {
         return stack == other.stack;
     }
 
-    // Inequality comparison
+    // Inequality
     bool operator!=(const GeometryIterator& other) const {
         return !(*this == other);
     }
 
 private:
+    // Each stack entry: (currentNode, currentChildIndex)
     std::stack<std::pair<pointer, size_t>> stack;
 
-    // Advance to the next valid node
+    // Advance to the next node that has geometryIndices, or run out
     void advanceToNextValid() {
         while (!stack.empty()) {
             auto& [currentNode, childIndex] = stack.top();
 
+            // 1) If this is the first time we see this node (childIndex == 0)
+            //    and it has geometry, we stop here so operator* sees it.
             if (childIndex == 0 && !currentNode->geometryIndices.empty()) {
-                return;
+                return; 
             }
 
+            // 2) Otherwise, if we still have children to explore
             if (childIndex < currentNode->children.size()) {
-                stack.emplace(&currentNode->children[childIndex], 0);
+                // Get the raw pointer from the unique_ptr
+                auto* childPtr = currentNode->children[childIndex].get();
+                stack.emplace(childPtr, 0);
                 childIndex++;
-            } else {
+            }
+            else {
+                // No more children -> pop
                 stack.pop();
             }
         }
     }
 };
 
-
-
-// Helper functions for iteration
+// Helper functions for iterating a single ProductNode
 inline GeometryIterator begin(const ProductNode& root) {
     return GeometryIterator(&root);
 }
@@ -94,9 +100,11 @@ inline GeometryIterator end(const ProductNode&) {
 
 class GeometryRange {
 public:
-    explicit GeometryRange(const std::vector<ProductNode>& roots) {
-        for (const auto& root : roots) {
-            iterators.emplace_back(GeometryIterator(&root), GeometryIterator());
+    // Suppose we have a vector of unique_ptr<ProductNode> as roots
+    explicit GeometryRange(const std::vector<std::unique_ptr<ProductNode>>& roots) {
+        for (auto const& rootPtr : roots) {
+            // rootPtr is a std::unique_ptr<ProductNode>, so we pass rootPtr.get()
+            iterators.emplace_back(GeometryIterator(rootPtr.get()), GeometryIterator());
         }
         updateCurrentIterator();
     }
@@ -114,12 +122,14 @@ private:
     GeometryIterator currentBegin;
 
     void updateCurrentIterator() {
+        // Find the first non-empty iterator
         for (auto& [it, endIt] : iterators) {
             if (it != endIt) {
                 currentBegin = it;
                 return;
             }
         }
+        // If all are empty, we produce an end iterator
         currentBegin = GeometryIterator();
     }
 };

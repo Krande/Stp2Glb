@@ -17,13 +17,14 @@
 #include <unordered_map>
 
 
-// Our struct from above
+// Updated struct
 struct ProductNode {
+    ProductNode* parent = nullptr; // new field to keep track of the node's parent
+
     int entityIndex;
     std::string name;
-    std::vector<ProductNode> children;
+    std::vector<std::unique_ptr<ProductNode>> children;
     int instanceIndex;
-    // references to geometries
     std::vector<int> geometryIndices;
     TDF_Label targetIndex;
     gp_Trsf transformation;
@@ -33,26 +34,33 @@ struct ProductNode {
             result.push_back(this);
         }
         for (const auto& child : children) {
-            child.collectNodesWithGeometry(result);
+            child->collectNodesWithGeometry(result);
         }
     }
 };
 
-std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model, const Interface_Graph& theGraph);
+std::vector<std::unique_ptr<ProductNode>> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model, const Interface_Graph& theGraph);
 
-std::string ExportHierarchyToJson(const std::vector<ProductNode>& roots);
+std::string ExportHierarchyToJson(const std::vector<std::unique_ptr<ProductNode>>& roots);
 
-void add_geometries_to_nodes(std::vector<ProductNode> &nodes, const Interface_Graph &theGraph);
+void add_geometries_to_nodes(std::vector<std::unique_ptr<ProductNode>> &nodes, const Interface_Graph &theGraph);
 
 gp_Trsf GetTransformationMatrix(
     const Handle(StepRepr_NextAssemblyUsageOccurrence)& nauo,
     const Interface_Graph& theGraph);
 
-static ProductNode BuildProductNodeWithTransform(
+static std::unique_ptr<ProductNode> BuildProductNodeWithTransform(
     int productIndex,
     const std::unordered_map<int, std::vector<int>>& parentToChildren,
     const Handle(Interface_InterfaceModel)& model,
     const Interface_Graph& theGraph,
     const gp_Trsf& parentTransform);
+
+static std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
+    int rootIndex,
+    const std::unordered_map<int, std::vector<int>>& parentToChildren,
+    const Handle(Interface_InterfaceModel)& model,
+    const Interface_Graph& theGraph,
+    const gp_Trsf& rootTransform = gp_Trsf());
 
 #endif //STEP_TREE_H

@@ -86,10 +86,10 @@ void stp_to_glb_v2(const GlobalConfig& config)
 
     std::cout << "Number of entities: " << num_entities << "\n";
 
-    auto curr_shape = 0;
+
 
     // Extract hierarchy
-    std::vector<ProductNode> roots = ExtractProductHierarchy(model, theGraph);
+    std::vector<std::unique_ptr<ProductNode>> roots = ExtractProductHierarchy(model, theGraph);
     add_geometries_to_nodes(roots, theGraph);
 
     // Use the iterator to get all shape entities
@@ -107,12 +107,22 @@ void stp_to_glb_v2(const GlobalConfig& config)
 
     std::cout << "Hierarchy exported to assembly_hierarchy.json\n";
 
+    int num_geometry = 0;
+    int num_products = 0;
+    // first find the number of geometries
+    for (const auto& node : GeometryRange(roots))
+    {
+        num_geometry += node.geometryIndices.size();
+        num_products++;
+    }
+    auto curr_shape = 0;
+    auto curr_product = 0;
     // Iterate over all nodes with geometry indices
     for (const auto& node : GeometryRange(roots))
     {
         Handle(StepBasic_Product) product = Handle(StepBasic_Product)::DownCast(model->Entity(node.entityIndex));
 
-        std::cout << "Node: " << node.name
+        std::cout << "Node: " << node.name << "(" << curr_product << "/" << num_products << ")"
             << ", EntityIndex: " << node.entityIndex
             << ", Geometry count: " << node.geometryIndices.size() << '\n';
 
@@ -126,12 +136,23 @@ void stp_to_glb_v2(const GlobalConfig& config)
 
             cobject.name = node.name;
 
-            if (!config.filter_names.empty())
-            {
-                auto vector_contains = check_if_string_in_vector(config.filter_names, cobject.name);
-
+            if (!config.filter_names_include.empty()) {
+                auto vector_contains = check_if_string_in_vector(config.filter_names_include, cobject.name);
                 if (!vector_contains)
                 {
+                    std::cout << "Skipping shape: " << cobject.name << " (Entity: " << node.entityIndex << ")\n";
+                    iterator.Next();
+                    continue;
+                }
+            }
+
+            if (!config.filter_names_exclude.empty())
+            {
+                auto vector_contains = check_if_string_in_vector(config.filter_names_exclude, cobject.name);
+
+                if (vector_contains)
+                {
+                    std::cout << "Skipping shape: " << cobject.name << " (Entity: " << node.entityIndex << ")\n";
                     iterator.Next();
                     continue;
                 }
@@ -162,19 +183,18 @@ void stp_to_glb_v2(const GlobalConfig& config)
 
             TDataStd_Name::Set(cobject.shape_label, cobject.name.c_str());
 
-            std::cout << "Adding Shape: " << cobject.name << " (Entity: " << node.entityIndex << ")\n";
-            // no forced flush
+
             auto color = random_color();
 
-
-
+            std::cout << "Adding Shape: " << cobject.name << " (Entity: " << node.entityIndex << ")\n";
             stp_writer.add_shape(shape, cobject.name, color, node);
 
             curr_shape++;
-            if (config.max_geometry_num != 0 && curr_shape >= config.max_geometry_num)
-            {
-                break;
-            }
+        }
+
+        if (config.max_geometry_num != 0 && curr_shape >= config.max_geometry_num)
+        {
+            break;
         }
     }
 

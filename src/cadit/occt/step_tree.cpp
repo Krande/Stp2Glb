@@ -24,6 +24,7 @@
 
 #include <gp_Ax1.hxx>
 #include <gp_Ax3.hxx>
+#include <stack>
 #include <StepGeom_Axis2Placement3D.hxx>
 #include <StepGeom_CartesianPoint.hxx>
 #include <StepGeom_Direction.hxx>
@@ -164,7 +165,7 @@ BuildAssemblyLinks(const Handle(Interface_InterfaceModel)& model, const Interfac
 
 
 // Main function: extracts top-level ProductNode trees with transformations
-std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model,
+std::vector<std::unique_ptr<ProductNode>> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model,
                                                  const Interface_Graph& theGraph)
 {
     // 1) Build the map of parent->children relationships
@@ -189,7 +190,7 @@ std::vector<ProductNode> ExtractProductHierarchy(const Handle(Interface_Interfac
     }
 
     // 4) For each product, if it’s NOT in allChildren => it’s a root
-    std::vector<ProductNode> roots;
+    std::vector<std::unique_ptr<ProductNode>> roots;
     for (int idx : allProducts)
     {
         if (allChildren.find(idx) == allChildren.end())
@@ -281,7 +282,7 @@ static void ProductNodeToJson(const ProductNode& node, std::ostream& os, int ind
     os << "\"children\": [\n";
     for (size_t i = 0; i < node.children.size(); i++)
     {
-        ProductNodeToJson(node.children[i], os, indentLevel + 2);
+        ProductNodeToJson(*node.children[i], os, indentLevel + 2);
         if (i + 1 < node.children.size())
         {
             os << ",";
@@ -296,13 +297,13 @@ static void ProductNodeToJson(const ProductNode& node, std::ostream& os, int ind
 }
 
 
-std::string ExportHierarchyToJson(const std::vector<ProductNode>& roots)
+std::string ExportHierarchyToJson(const std::vector<std::unique_ptr<ProductNode>>& roots)
 {
     std::ostringstream oss;
     oss << "[\n";
     for (size_t i = 0; i < roots.size(); i++)
     {
-        ProductNodeToJson(roots[i], oss, 1);
+        ProductNodeToJson(*roots[i], oss, 1);
         if (i + 1 < roots.size())
         {
             oss << ",";
@@ -314,10 +315,16 @@ std::string ExportHierarchyToJson(const std::vector<ProductNode>& roots)
     return oss.str();
 }
 
-void add_geometries_to_nodes(std::vector<ProductNode>& nodes, const Interface_Graph& theGraph)
+void add_geometries_to_nodes(std::vector<std::unique_ptr<ProductNode>>& nodes, const Interface_Graph& theGraph)
 {
-    for (auto& node : nodes)
+    for (auto& ref_node : nodes)
     {
+        // 'node' is a std::unique_ptr<ProductNode>&
+        if (!ref_node) {
+            // If it's a null pointer, skip it
+            continue;
+        }
+        auto& node = *ref_node;
         auto& product = theGraph.Entity(node.entityIndex);
         Interface_EntityIterator breps =
             Get_Associated_SolidModel_BiDirectional(product,
@@ -542,15 +549,15 @@ Handle(StepRepr_NextAssemblyUsageOccurrence) Get_NextAssemblyUsageOccurrence(con
 }
 
 // Recursive function that builds a ProductNode tree with transformations
-static ProductNode BuildProductNodeWithTransform(
+static std::unique_ptr<ProductNode> BuildProductNodeWithTransform(
     int productIndex,
     const std::unordered_map<int, std::vector<int>>& parentToChildren,
     const Handle(Interface_InterfaceModel)& model,
     const Interface_Graph& theGraph,
     const gp_Trsf& parentTransform = gp_Trsf())
 {
-    ProductNode node;
-    node.entityIndex = productIndex;
+    auto node = std::make_unique<ProductNode>();
+    node->entityIndex = productIndex;
 
     const Handle(Standard_Transient) ent = model->Value(productIndex);
     const auto product = Handle(StepBasic_Product)::DownCast(ent);
@@ -560,21 +567,21 @@ static ProductNode BuildProductNodeWithTransform(
 
     if (!product.IsNull() && !product->Name().IsNull())
     {
-        node.name = product->Name()->ToCString();
+        node->name = product->Name()->ToCString();
     }
     else
     {
-        node.name = "(unnamed product)";
+        node->name = "(unnamed product)";
     }
 
     gp_Trsf localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
     // get the entity id of nauo
-    node.instanceIndex = theGraph.Model()->Number(nauo);
+    node->instanceIndex = theGraph.Model()->Number(nauo);
 
     // Combine parent transformation with local transformation
     gp_Trsf absoluteTransform = parentTransform;
     absoluteTransform.Multiply(localTransform);
-    node.transformation = absoluteTransform;
+    node->transformation = absoluteTransform;
 
     // Recurse for children
     auto it = parentToChildren.find(productIndex);
@@ -582,10 +589,118 @@ static ProductNode BuildProductNodeWithTransform(
     {
         for (int childIdx : it->second)
         {
-            node.children.push_back(
+            node->children.push_back(
                 BuildProductNodeWithTransform(childIdx, parentToChildren, model, theGraph, absoluteTransform));
         }
     }
 
     return node;
+}
+
+// Iterative function
+std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
+    int rootIndex,
+    const std::unordered_map<int, std::vector<int>>& parentToChildren,
+    const Handle(Interface_InterfaceModel)& model,
+    const Interface_Graph& theGraph,
+    const gp_Trsf& rootTransform)
+{
+     // Create the root node
+    auto rootNode = std::make_unique<ProductNode>();
+    rootNode->parent = nullptr;
+    rootNode->entityIndex = rootIndex;
+    // We'll fill in transform/name/etc. below
+
+    // A stack item for our DFS
+    struct StackItem {
+        ProductNode* node;   // pointer to the node in which we'll store data
+        int productIndex;    // which product index this node corresponds to
+        gp_Trsf parentTrsf;  // the parent's final transform to be combined with local transform
+    };
+
+    std::stack<StackItem> stack;
+    stack.push({ rootNode.get(), rootIndex, rootTransform });
+
+    // A set to track visited product indices
+    // to avoid infinite loops if there's a cycle
+    std::unordered_set<int> visited;
+    visited.insert(rootIndex);
+
+    while (!stack.empty()) {
+        auto [nodePtr, productIdx, accumulatedTrsf] = stack.top();
+        stack.pop();
+
+        // --- 1) Safety checks to avoid segfaults ---
+
+        // If productIdx is invalid (e.g. out of range for the model),
+        // we skip filling data and proceed.  Depending on your data,
+        // you might want to throw an exception instead.
+        if (productIdx < 1 || productIdx > model->NbEntities()) {
+            // Mark something or skip
+            nodePtr->name = "(invalid index)";
+            nodePtr->instanceIndex = -1;
+            continue;
+        }
+
+        // --- 2) Look up the product from the model ---
+        Handle(Standard_Transient) ent = model->Value(productIdx);
+        if (ent.IsNull()) {
+            nodePtr->name = "(model->Value() returned null)";
+            nodePtr->instanceIndex = -1;
+            continue;
+        }
+        auto product = Handle(StepBasic_Product)::DownCast(ent);
+        if (product.IsNull()) {
+            nodePtr->name = "(not a StepBasic_Product)";
+            nodePtr->instanceIndex = -1;
+            continue;
+        }
+
+        // --- 3) Compute local transform and combine with parent's ---
+        auto nauo = Get_NextAssemblyUsageOccurrence(product, theGraph);
+        if (!nauo.IsNull()) {
+            gp_Trsf localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
+
+            gp_Trsf finalTransform = accumulatedTrsf;
+            finalTransform.Multiply(localTransform);
+            nodePtr->transformation = finalTransform;
+
+            // Instance index from the graph
+            nodePtr->instanceIndex = theGraph.Model()->Number(nauo);
+        } else {
+            // If NAUO is invalid for some reason
+            nodePtr->transformation = accumulatedTrsf;
+            nodePtr->instanceIndex = -1;
+        }
+
+        // --- 4) Fill the node's name ---
+        if (!product->Name().IsNull()) {
+            nodePtr->name = product->Name()->ToCString();
+        } else {
+            nodePtr->name = "(unnamed product)";
+        }
+
+        // --- 5) Create child nodes and push them onto the stack ---
+        auto it = parentToChildren.find(productIdx);
+        if (it != parentToChildren.end()) {
+            for (int childIdx : it->second) {
+                // If we've already seen this index, skip to avoid cycles
+                if (!visited.insert(childIdx).second) {
+                    continue;
+                }
+
+                // Create a child node by value in the parent's children vector
+                nodePtr->children.emplace_back();
+                std::unique_ptr<ProductNode>& childRef = nodePtr->children.back();
+                childRef->parent = nodePtr;
+                childRef->entityIndex = childIdx;
+
+                // We'll fill all the child details once we pop from the stack
+                // For now, just push onto the stack
+                stack.push({ childRef.get(), childIdx, nodePtr->transformation });
+            }
+        }
+    }
+
+    return rootNode;
 }
