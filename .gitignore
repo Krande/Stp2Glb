@@ -7,3 +7,4 @@ temp/
 .vs/
 # pixi environments
 .pixi/
+output/

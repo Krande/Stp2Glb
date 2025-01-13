@@ -11,7 +11,7 @@
 #include <BRepBuilderAPI_MakeShape.hxx>
 #include "geometry_iterator.h"
 #include <iostream>
-#include "step_to_glb_v2.h"
+#include "debug.h"
 
 #include <BRepBuilderAPI_Transform.hxx>
 
@@ -27,7 +27,7 @@
 #include "../../config_structs.h"
 
 
-void stp_to_glb_v2(const GlobalConfig& config)
+void debug_stp_to_glb(const GlobalConfig& config)
 {
     // Initialize the STEPCAFControl_Reader
     STEPCAFControl_Reader reader;
@@ -86,16 +86,13 @@ void stp_to_glb_v2(const GlobalConfig& config)
 
     std::cout << "Number of entities: " << num_entities << "\n";
 
-
-
     // Extract hierarchy
     std::vector<std::unique_ptr<ProductNode>> roots = ExtractProductHierarchy(model, theGraph);
     add_geometries_to_nodes(roots, theGraph);
 
-    // Use the iterator to get all shape entities
     AdaCPPStepWriter stp_writer = AdaCPPStepWriter("Assembly", roots);
 
-    // Convert to JSON
+    // Convert Hierarchy to JSON
     std::string jsonOutput = ExportHierarchyToJson(roots);
 
     // Then write to file or print to console:
@@ -122,12 +119,13 @@ void stp_to_glb_v2(const GlobalConfig& config)
     {
         Handle(StepBasic_Product) product = Handle(StepBasic_Product)::DownCast(model->Entity(node.entityIndex));
 
-        std::cout << "Node: " << node.name << "(" << curr_product << "/" << num_products << ")"
+        std::cout << "Node: " << node.name << " (" << curr_product << "/" << num_products << ")"
             << ", EntityIndex: " << node.entityIndex
             << ", Geometry count: " << node.geometryIndices.size() << '\n';
 
         for (int geometryIndex : node.geometryIndices)
         {
+            std::cout << "Geometry: " << geometryIndex << " (" << curr_shape << "/" << num_geometry << ")\n";
             auto brep = model->Entity(geometryIndex);
             ConvertObject cobject = entity_to_shape(brep, default_reader, shape_tool, meshParams, config.solidOnly);
             TopoDS_Shape shape = cobject.shape;
@@ -186,7 +184,7 @@ void stp_to_glb_v2(const GlobalConfig& config)
 
             auto color = random_color();
 
-            std::cout << "Adding Shape: " << cobject.name << " (Entity: " << node.entityIndex << ")\n";
+            std::cout << "Adding Shape: " << cobject.name << " (Entity: " << node.entityIndex << ") to STEP Writer\n";
             stp_writer.add_shape(shape, cobject.name, color, node);
 
             curr_shape++;
@@ -196,16 +194,18 @@ void stp_to_glb_v2(const GlobalConfig& config)
         {
             break;
         }
-    }
-
-    // Write to GLB
-    std::cout << "Writing to GLB file: " << config.stpFile << "\n";
-    {
-        TIME_BLOCK("Writing to GLB file");
-        to_glb_from_doc(config.glbFile, doc);
+        curr_product++;
     }
 
     const std::filesystem::path out_file = config.glbFile.parent_path() / config.glbFile.stem().concat("-debug.stp");
 
     stp_writer.export_step(out_file.string().c_str());
+
+    // Write to GLB
+    std::cout << "Writing to GLB file: " << config.stpFile << "\n";
+    {
+        TIME_BLOCK("Writing to GLB file");
+
+        to_glb_from_doc(config.glbFile, doc);
+    }
 }

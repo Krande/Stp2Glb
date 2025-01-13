@@ -9,8 +9,8 @@
 #include "config_structs.h"
 #include <chrono>
 #include "CLI/CLI.hpp"
-#include "cadit/occt/step_to_glb_v2.h"
-#include "cadit/occt/step_to_glb_v1.h"
+#include "cadit/occt/debug.h"
+#include "cadit/occt/convert.h"
 #include "cadit/stepcode/sc_parser.h"
 #include "cadit/occt/bsplinesurf.h"
 #include "cadit/occt/helpers.h"
@@ -33,6 +33,9 @@ int main(int argc, char* argv[])
     app.add_option("--filter-names-exclude", "Exclude Filter name. Command separated list")->default_val("");
     app.add_option("--filter-names-file-exclude", "Exclude Filter name file")->default_val("");
 
+    const auto build = app.add_subcommand("build", "Build");
+    build->add_option("--b-spline-surf", "Build a B-Spline surface")->default_val(false);
+
     CLI11_PARSE(app, argc, argv);
 
     const auto config = process_parameters(app);
@@ -40,12 +43,13 @@ int main(int argc, char* argv[])
     try
     {
         const auto start = std::chrono::high_resolution_clock::now();
-        if (config.version == 0)
+        if (config.buildConfig.build_bspline_surf)
             make_a_bspline_surf(config);
-        else if (config.version == 1)
-            stp_to_glb_v1(config);
+
+        if (config.version == 1)
+            convert_stp_to_glb(config);
         else if (config.version == 2)
-            stp_to_glb_v2(config);
+            debug_stp_to_glb(config);
         else if (config.version == 3)
             lazy_step_parser(config);
         else

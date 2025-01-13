@@ -8,6 +8,10 @@
 
 #include <filesystem>
 
+struct BuildConfig {
+    bool build_bspline_surf;
+};
+
 struct GlobalConfig {
     std::filesystem::path stpFile;
     std::filesystem::path glbFile;
@@ -25,6 +29,8 @@ struct GlobalConfig {
 
     std::vector<std::string> filter_names_include;
     std::vector<std::string> filter_names_exclude;
+
+    BuildConfig buildConfig;
 };
 
 

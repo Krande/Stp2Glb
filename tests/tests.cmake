@@ -43,7 +43,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/temp/really_large.stp")
             --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/really_large-v2.glb
             --version 2
             --solid-only=true
-            --max-geometry-num=0
+            --max-geometry-num=4000
             --filter-names-file-exclude=${CMAKE_CURRENT_SOURCE_DIR}/temp/skip-these-nodes.txt
             WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/bin"
     )

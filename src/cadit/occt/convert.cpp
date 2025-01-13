@@ -2,7 +2,7 @@
 // Created by ofskrand on 12.09.2024.
 //
 
-#include "step_to_glb_v1.h"
+#include "convert.h"
 #include <STEPCAFControl_Reader.hxx>
 #include <XCAFDoc_DocumentTool.hxx>
 #include <RWGltf_CafWriter.hxx>
@@ -12,7 +12,7 @@
 #include <XCAFDoc_ShapeTool.hxx>
 #include "../../config_structs.h"
 
-void stp_to_glb_v1(const GlobalConfig& config)
+void convert_stp_to_glb(const GlobalConfig& config)
 {
     // Initialize the STEPCAFControl_Reader
     STEPCAFControl_Reader reader;
@@ -41,6 +41,7 @@ void stp_to_glb_v1(const GlobalConfig& config)
 
     if (!reader.Transfer(doc))
         throw std::runtime_error("Error transferring data to document");
+
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration<double>(stop - start).count();
     std::cout << "Transfer complete in " << std::fixed << std::setprecision(2) << duration << " seconds" << std::endl;

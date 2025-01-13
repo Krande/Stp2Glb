@@ -29,6 +29,15 @@
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "ON"
       }
+    },
+    {
+      "name": "win-local-static",
+      "inherits": "win-local",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": "OFF",
+        "BUILD_STATIC": "ON"
+      }
     }
   ]
 }

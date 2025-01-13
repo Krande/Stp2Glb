@@ -29,3 +29,6 @@ ifcopenshell = { version = "*", build = "*debug*" }
 build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-release", "--fresh"] }
 install = { cmd = ["ninja", "-C", "build/win-local-release", "install"], description = "Install the project" }
 test = { cmd = ["ctest"], cwd="build/win-local-release", description = "Run the tests" }
+
+bstatic = { cmd=["cmake","-G","Ninja", "--preset", "win-local-static", "--fresh"] }
+istatic = { cmd = ["ninja", "-C", "build/win-local-static", "install"], description = "Install the project" }

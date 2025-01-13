@@ -7,7 +7,7 @@
 #include "../../config_structs.h"
 
 // Function to convert STEP file to GLB file
-void stp_to_glb_v2(const GlobalConfig& config);
+void debug_stp_to_glb(const GlobalConfig& config);
 
 
 #endif //STEP_TO_GLB_H
