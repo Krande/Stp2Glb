@@ -58,6 +58,7 @@ add_definitions(-DNOMINMAX)
 # Install the C++ executable
 set(SOURCES
         src/main.cpp
+        src/config_utils.cpp
         src/geom/Color.cpp
         src/cadit/occt/step_tree.cpp
         src/cadit/occt/debug.cpp
@@ -68,7 +69,6 @@ set(SOURCES
         src/cadit/occt/helpers.cpp
         src/cadit/occt/step_writer.cpp
         src/cadit/stepcode/sc_parser.cpp
-        src/config_utils.cpp
 )
 set(HEADERS
         src/config_utils.h
