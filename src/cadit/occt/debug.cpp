@@ -13,7 +13,7 @@
 #include <iostream>
 #include "debug.h"
 
-#include <BRepBuilderAPI_Transform.hxx>
+#include <future>
 
 #include "step_writer.h"
 #include <Interface_Static.hxx>
@@ -26,6 +26,94 @@
 #include "step_tree.h"
 #include "../../config_structs.h"
 
+class CustomProgressIndicator : public Message_ProgressIndicator {
+public:
+    CustomProgressIndicator() : shouldCancel(false) {}
+
+    //! Called by OpenCASCADE to check if the operation should stop
+    Standard_Boolean UserBreak() override {
+        return shouldCancel; // Return true to stop the operation
+    }
+
+    //! Updates progress
+    void Show(const Message_ProgressScope& theScope, const Standard_Boolean isForce) override {
+        // Optional: Print progress or log it
+        // std::cout << "Progress: " << GetPosition() * 100.0 << "%\n";
+
+        // Clear the previous output line and overwrite it
+        //std::cout << "\rProgress: " << static_cast<int>(GetPosition() * 100.0) << "%   " << std::flush;
+
+        const int barWidth = 50; // Width of the progress bar
+        double progress = GetPosition(); // Current progress [0.0, 1.0]
+
+        // Build the progress bar
+        std::cout << "\r[";
+        int pos = static_cast<int>(progress * barWidth);
+        for (int i = 0; i < barWidth; ++i) {
+            if (i < pos) std::cout << "=";  // Completed part
+            else if (i == pos) std::cout << ">";  // Current progress
+            else std::cout << " ";  // Remaining part
+        }
+        std::cout << "] " << static_cast<int>(progress * 100.0) << "%   " << std::flush;
+    }
+
+    //! Cancels the progress
+    void Cancel() {
+        shouldCancel = true;
+    }
+
+    //! Resets the progress indicator (optional implementation)
+    void Reset() override {
+        shouldCancel = false;
+    }
+
+private:
+    std::atomic<bool> shouldCancel; // Thread-safe cancellation flag
+};
+
+// Function to perform tessellation with a timeout
+bool perform_tessellation_with_timeout(const TopoDS_Shape& shape, IMeshTools_Parameters& meshParams, int timeoutSeconds) {
+    // Create a custom progress indicator
+    Handle(CustomProgressIndicator) progress = new CustomProgressIndicator();
+
+    // Create a progress range with a default name and range
+    Message_ProgressRange progressRange = progress->Start();
+
+    // Flag to track if the operation timed out
+    std::atomic<bool> tessellationComplete = false;
+
+    // Launch tessellation in a separate thread
+    std::thread tessellationThread([&]() {
+        try {
+            // Run tessellation with progress monitoring
+            BRepMesh_IncrementalMesh mesh(shape, meshParams, progressRange);
+
+            // Mark as complete
+            tessellationComplete = true;
+        } catch (const Standard_Failure& e) {
+            std::cerr << "Tessellation failed: " << e.GetMessageString() << "\n";
+        }
+    });
+
+    // Monitor the tessellation thread for timeout
+    const auto start = std::chrono::steady_clock::now();
+    while (std::chrono::steady_clock::now() - start < std::chrono::seconds(timeoutSeconds)) {
+        if (tessellationComplete) {
+            // Tessellation finished successfully
+            tessellationThread.join();
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Poll every 50 ms
+    }
+
+    // Timeout occurred, cancel tessellation
+    progress->Cancel();
+    if (tessellationThread.joinable()) {
+        tessellationThread.join();
+    }
+
+    return false; // Tessellation timed out
+}
 
 void debug_stp_to_glb(const GlobalConfig& config)
 {
@@ -156,11 +244,14 @@ void debug_stp_to_glb(const GlobalConfig& config)
                 }
             }
 
+            // Updated code block
             {
                 TIME_BLOCK("Applying tessellation");
-                // Perform tessellation (discretization) on the shape
-                BRepMesh_IncrementalMesh mesh(shape, meshParams);
-                // Adjust 0.1 for finer/coarser tessellation
+                if (perform_tessellation_with_timeout(shape, meshParams, 30)) {
+                    std::cout << "Tessellation completed successfully.\n";
+                } else {
+                    std::cout << "Tessellation timed out.\n";
+                }
             }
 
             // Add the TopoDS_Shape to the document

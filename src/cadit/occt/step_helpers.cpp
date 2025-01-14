@@ -393,7 +393,6 @@ TopoDS_Shape make_shape(const Handle(StepShape_SolidModel)& solid_model, STEPCon
         };
         TopoDS_Shape shape = reader.Shape(reader.NbShapes());
 
-        // Todo: traverse parent objects to resolve affected transformations applied indirectly to this shape
         return shape;
     }
     return {};
