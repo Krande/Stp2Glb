@@ -11,7 +11,6 @@
 #include "CLI/CLI.hpp"
 #include "cadit/occt/debug.h"
 #include "cadit/occt/convert.h"
-#include "cadit/stepcode/sc_parser.h"
 #include "cadit/occt/bsplinesurf.h"
 #include "cadit/occt/helpers.h"
 #include "config_utils.h"
@@ -50,8 +49,6 @@ int main(int argc, char* argv[])
             convert_stp_to_glb(config);
         else if (config.version == 2)
             debug_stp_to_glb(config);
-        else if (config.version == 3)
-            lazy_step_parser(config);
         else
         {
             std::cout << "Invalid version number." << std::endl;

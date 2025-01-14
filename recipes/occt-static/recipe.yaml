@@ -17,6 +17,7 @@ source:
 
 build:
   number: ${{ build }}
+  string: static_h${{ hash }}_${{ build }}
 
 requirements:
   build:

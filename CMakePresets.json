@@ -33,10 +33,19 @@
     {
       "name": "win-local-static",
       "inherits": "win-local",
+      "environment": {
+        "PREFIX": "${sourceDir}/.pixi/envs/static",
+        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/static/Library"
+      },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INCLUDE_PATH": "$env{LIBRARY_PREFIX}/include",
+        "CMAKE_PREFIX_PATH": "$env{LIBRARY_PREFIX};$env{LIBRARY_PREFIX}/include;$env{LIBRARY_PREFIX}/lib;$env{LIBRARY_PREFIX}/bin",
+        "CMAKE_INSTALL_PREFIX": "$env{LIBRARY_PREFIX}",
         "BUILD_TESTING": "OFF",
-        "BUILD_STATIC": "ON"
+        "BUILD_STATIC": "ON",
+        "BUILD_SHARED_LIBS": "OFF",
+        "CONDA_LOCAL_DEV": "OFF"
       }
     }
   ]

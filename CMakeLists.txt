@@ -14,12 +14,10 @@ include(cmake/pre_checks.cmake)
 
 # Create a empty list to hold all the linked libs
 set(ADA_CPP_LINK_LIBS)
-
 # Add dependencies
-include(cmake/deps_cgal.cmake)
+
 include(cmake/deps_occ.cmake)
-include(cmake/deps_ifc.cmake)
-include(cmake/deps_stepcode.cmake)
+
 
 # Add an option to enable static builds
 OPTION(BUILD_STATIC "Build STP2GLB as a static executable." OFF)
@@ -50,6 +48,10 @@ if (BUILD_STATIC)
             )
         endif()
     endforeach()
+else()
+    include(cmake/deps_ifc.cmake)
+    include(cmake/deps_stepcode.cmake)
+    include(cmake/deps_cgal.cmake)
 endif()
 
 add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -68,7 +70,6 @@ set(SOURCES
         src/cadit/occt/bsplinesurf.cpp
         src/cadit/occt/helpers.cpp
         src/cadit/occt/step_writer.cpp
-        src/cadit/stepcode/sc_parser.cpp
 )
 set(HEADERS
         src/config_utils.h
@@ -83,7 +84,6 @@ set(HEADERS
         src/cadit/occt/helpers.h
         src/cadit/occt/step_writer.h
         src/cadit/occt/geometry_iterator.h
-        src/cadit/stepcode/sc_parser.h
 )
 
 add_executable(STP2GLB ${SOURCES} ${HEADERS})
@@ -92,6 +92,14 @@ set_target_properties(STP2GLB PROPERTIES
         INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/bin")
 
 target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS})
+
+if (BUILD_STATIC AND MSVC)
+#    target_link_options(STP2GLB PUBLIC /NODEFAULTLIB:MSVCRT)
+    target_link_options(STP2GLB PUBLIC /NODEFAULTLIB:MSVCRT /NODEFAULTLIB:LIBCMT)
+    target_include_directories(STP2GLB PRIVATE
+        $ENV{LIBRARY_PREFIX}/include
+    )
+endif()
 
 # install to executable into the bin dir
 message(STATUS "Installing executable to ${EXE_BIN_DIR}")
@@ -102,8 +110,6 @@ OPTION(BUILD_TESTING "Build the testing tree." ON)
 if (BUILD_TESTING)
     message(STATUS "Building the testing tree.")
     enable_testing()
-    #set(CMAKE_INSTALL_RPATH "${EXE_BIN_DIR}")
-    #set(CMAKE_BUILD_RPATH "${EXE_BIN_DIR}")
     include(tests/tests.cmake)
 endif (BUILD_TESTING)
 
