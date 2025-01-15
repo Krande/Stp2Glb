@@ -25,10 +25,10 @@ public:
 
     explicit StepStore(const std::string& top_level_name = "Assembly");
 
-    StepStore(const std::vector<std::unique_ptr<ProductNode>>& product_hierarchy);
+    explicit StepStore(const std::vector<std::unique_ptr<ProductNode>>& product_hierarchy);
 
     void add_shape(const TopoDS_Shape& shape, const std::string& name, const Color& rgb_color,
-        const ProductNode& parent_product_entity_index, const TDF_Label& parent = TDF_Label());
+        const ProductNode& parent_node);
 
     void to_step(const std::filesystem::path& step_file) const;
 

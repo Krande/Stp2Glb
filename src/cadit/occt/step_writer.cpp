@@ -67,7 +67,7 @@ void StepStore::create_hierarchy(const std::vector<std::unique_ptr<ProductNode> 
 
         set_name(child_label, node->name);
         product_labels_[node->name] = child_label;
-        entity_labels_[node->entityIndex] = child_label;
+        entity_labels_[node->instanceIndex] = child_label;
         node->targetIndex = target_label;
 
         if (!node->children.empty()) {
@@ -90,23 +90,29 @@ void StepStore::set_color(const TDF_Label &label, const Color &rgb_color,
 
 // Add a shape
 void StepStore::add_shape(const TopoDS_Shape &shape, const std::string &name,
-                          const Color &rgb_color, const ProductNode &parent_product,
-                          const TDF_Label &parent) {
-    const TDF_Label parent_label = entity_labels_[parent_product.entityIndex];
-    if (parent_label.IsNull()) {
-        throw std::runtime_error("Parent product not found: " + parent_product.name);
+                          const Color &rgb_color, const ProductNode &dummy_product) {
+    const TDF_Label dummy_label = entity_labels_[dummy_product.instanceIndex];
+    const TDF_Label parent_label = entity_labels_[dummy_product.parent->instanceIndex];
+
+    if (dummy_label.IsNull()) {
+        throw std::runtime_error("Parent product not found: " + dummy_product.name);
     }
-    const auto location = TopLoc_Location(parent_product.transformation);
+    const auto location = TopLoc_Location(dummy_product.transformation);
+    // replace the dummy label with the actual shape
+
+    // get parent of dummy label
+
+    shape_tool_->RemoveShape(dummy_label, Standard_True);
     const TDF_Label shape_label = shape_tool_->AddShape(shape, Standard_False, Standard_False);
     shape_tool_->AddComponent(parent_label, shape_label, location);
 
     set_color(shape_label, rgb_color, color_tool_);
     set_name(shape_label, name);
 
-    const auto new_shape = shape_tool_->GetShape(shape_label);
+    const auto new_shape = XCAFDoc_ShapeTool::GetShape(shape_label);
 
     // Add any additional location transformations from product to shape
-    BRepBuilderAPI_Transform shapeTransform(parent_product.transformation);
+    BRepBuilderAPI_Transform shapeTransform(dummy_product.transformation);
     shapeTransform.Perform(new_shape, Standard_False);
 }
 

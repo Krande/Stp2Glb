@@ -260,10 +260,10 @@ void debug_stp_to_glb(const GlobalConfig &config) {
     for (const auto &node: GeometryRange(roots)) {
         if (!node.processResult.added_to_model && node.processResult.geometryIndex != 0) {
             log_file << "{\n";
-            log_file << "\"name\": \"" << node.name << "\",\n";
+            log_file << R"("name": ")" << node.name << "\",\n";
             log_file << "\"entityIndex\": " << node.entityIndex << ",\n";
             log_file << "\"geometryIndex\": " << node.processResult.geometryIndex << ",\n";
-            log_file << "\"skipReason\": \"" << node.processResult.skip_reason << "\"\n";
+            log_file << R"("skipReason": ")" << node.processResult.skip_reason << "\"\n";
             log_file << "},\n";
         }
     }

@@ -163,7 +163,8 @@ BuildAssemblyLinks(const Handle(Interface_InterfaceModel)& model, const Interfac
     return parentToChildren;
 }
 
-
+// Definition of the static counter
+int ProductNode::instanceCounter = 0;
 // Main function: extracts top-level ProductNode trees with transformations
 std::vector<std::unique_ptr<ProductNode>> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model,
                                                  const Interface_Graph& theGraph)
@@ -554,10 +555,12 @@ static std::unique_ptr<ProductNode> BuildProductNodeWithTransform(
     const std::unordered_map<int, std::vector<int>>& parentToChildren,
     const Handle(Interface_InterfaceModel)& model,
     const Interface_Graph& theGraph,
-    const gp_Trsf& parentTransform = gp_Trsf())
+    const gp_Trsf& parentTransform = gp_Trsf(),
+    ProductNode* parent)
 {
     auto node = std::make_unique<ProductNode>();
     node->entityIndex = productIndex;
+    node->parent = parent;
 
     const Handle(Standard_Transient) ent = model->Value(productIndex);
     const auto product = Handle(StepBasic_Product)::DownCast(ent);
@@ -576,7 +579,7 @@ static std::unique_ptr<ProductNode> BuildProductNodeWithTransform(
 
     gp_Trsf localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
     // get the entity id of nauo
-    node->instanceIndex = theGraph.Model()->Number(nauo);
+    // node->instanceIndex = theGraph.Model()->Number(nauo);
 
     // Combine parent transformation with local transformation
     gp_Trsf absoluteTransform = parentTransform;
@@ -590,7 +593,7 @@ static std::unique_ptr<ProductNode> BuildProductNodeWithTransform(
         for (int childIdx : it->second)
         {
             node->children.push_back(
-                BuildProductNodeWithTransform(childIdx, parentToChildren, model, theGraph, absoluteTransform));
+                BuildProductNodeWithTransform(childIdx, parentToChildren, model, theGraph, absoluteTransform, node.get()));
         }
     }
 
@@ -638,7 +641,7 @@ std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
         if (productIdx < 1 || productIdx > model->NbEntities()) {
             // Mark something or skip
             nodePtr->name = "(invalid index)";
-            nodePtr->instanceIndex = -1;
+            // nodePtr->instanceIndex = -1;
             continue;
         }
 
@@ -646,13 +649,13 @@ std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
         Handle(Standard_Transient) ent = model->Value(productIdx);
         if (ent.IsNull()) {
             nodePtr->name = "(model->Value() returned null)";
-            nodePtr->instanceIndex = -1;
+            // nodePtr->instanceIndex = -1;
             continue;
         }
         auto product = Handle(StepBasic_Product)::DownCast(ent);
         if (product.IsNull()) {
             nodePtr->name = "(not a StepBasic_Product)";
-            nodePtr->instanceIndex = -1;
+            // nodePtr->instanceIndex = -1;
             continue;
         }
 
@@ -670,7 +673,7 @@ std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
         } else {
             // If NAUO is invalid for some reason
             nodePtr->transformation = accumulatedTrsf;
-            nodePtr->instanceIndex = -1;
+            // nodePtr->instanceIndex = -1;
         }
 
         // --- 4) Fill the node's name ---

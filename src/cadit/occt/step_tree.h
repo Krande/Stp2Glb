@@ -25,7 +25,11 @@ struct ProcessResult {
 
 // Updated struct
 struct ProductNode {
-    ProductNode *parent = nullptr; // new field to keep track of the node's parent
+    // Static counter for generating unique instance indices
+    static int instanceCounter;
+
+
+    ProductNode* parent; // new field to keep track of the node's parent
 
     int entityIndex;
     std::string name;
@@ -35,6 +39,9 @@ struct ProductNode {
     TDF_Label targetIndex;
     gp_Trsf transformation;
     ProcessResult processResult = ProcessResult(false, "");
+
+    // Constructor to initialize and assign unique instanceIndex
+    ProductNode() : instanceIndex(instanceCounter++) {}
 
     void collectNodesWithGeometry(std::vector<const ProductNode *> &result) const {
         if (!geometryIndices.empty()) {
@@ -63,7 +70,7 @@ static std::unique_ptr<ProductNode> BuildProductNodeWithTransform(
     const std::unordered_map<int, std::vector<int> > &parentToChildren,
     const Handle(Interface_InterfaceModel) &model,
     const Interface_Graph &theGraph,
-    const gp_Trsf &parentTransform);
+    const gp_Trsf &parentTransform, ProductNode* parent = nullptr);
 
 static std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
     int rootIndex,
