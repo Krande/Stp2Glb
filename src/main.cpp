@@ -15,6 +15,39 @@
 #include "cadit/occt/helpers.h"
 #include "config_utils.h"
 
+void print_status(const GlobalConfig config) {
+    std::cout << "STP2GLB Converter" << "\n";
+    std::cout << "STP File: " << config.stpFile << "\n";
+    std::cout << "GLB File: " << config.glbFile << "\n\n";
+    std::cout << "Tessellation Parameters: " << "\n";
+    std::cout << "Linear Deflection: " << config.linearDeflection << "\n";
+    std::cout << "Angular Deflection: " << config.angularDeflection << "\n";
+    std::cout << "Relative Deflection: " << config.relativeDeflection << "\n\n";
+    std::cout << "Debug Parameters: " << "\n";
+    std::cout << "Version: " << config.version << "\n";
+    std::cout << "Solid Only: " << config.solidOnly << "\n";
+    std::cout << "Max Geometry Num: " << config.max_geometry_num << "\n";
+    std::cout << "Tessellation Timeout: " << config.tessellation_timout << "\n\n";
+
+    // Debug output
+    if (!config.filter_names_include.empty())
+    {
+        std::cout << "Included Filter Names:" << std::endl;
+        for (const auto& name : config.filter_names_include)
+        {
+            std::cout << name << std::endl;
+        }
+    }
+    if (!config.filter_names_exclude.empty())
+    {
+        std::cout << "Excluded Filter Names:" << std::endl;
+        for (const auto& name : config.filter_names_exclude)
+        {
+            std::cout << name << std::endl;
+        }
+    }
+}
+
 int main(int argc, char* argv[])
 {
     CLI::App app{"STEP to GLB converter"};
@@ -31,6 +64,7 @@ int main(int argc, char* argv[])
     app.add_option("--filter-names-file-include", "Include Filter name file")->default_val("");
     app.add_option("--filter-names-exclude", "Exclude Filter name. Command separated list")->default_val("");
     app.add_option("--filter-names-file-exclude", "Exclude Filter name file")->default_val("");
+    app.add_option("--tessellation-timeout", "Tessellation timeout")->default_val(30);
 
     const auto build = app.add_subcommand("build", "Build");
     build->add_option("--b-spline-surf", "Build a B-Spline surface")->default_val(false);
@@ -39,6 +73,9 @@ int main(int argc, char* argv[])
 
     const auto config = process_parameters(app);
 
+    print_status(config);
+    std::cout << "\n";
+    std::cout << "Starting conversion..." << "\n";
     try
     {
         const auto start = std::chrono::high_resolution_clock::now();
@@ -51,17 +88,17 @@ int main(int argc, char* argv[])
             debug_stp_to_glb(config);
         else
         {
-            std::cout << "Invalid version number." << std::endl;
+            std::cout << "Invalid version number." << "\n";
             return 1;
         }
         const auto stop = std::chrono::high_resolution_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
-        std::cout << "STP converted in: " << duration.count() << " microseconds" << std::endl;
+        std::cout << "STP converted in: " << duration.count() << " microseconds" << "\n";
     }
     catch (...)
     {
-        std::cout << "Unknown error occurred." << std::endl;
+        std::cout << "Unknown error occurred." << "\n";
         return 1;
     }
 

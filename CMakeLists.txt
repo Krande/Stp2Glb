@@ -70,6 +70,7 @@ set(SOURCES
         src/cadit/occt/bsplinesurf.cpp
         src/cadit/occt/helpers.cpp
         src/cadit/occt/step_writer.cpp
+        src/cadit/occt/custom_progress.cpp
 )
 set(HEADERS
         src/config_utils.h
@@ -84,6 +85,7 @@ set(HEADERS
         src/cadit/occt/helpers.h
         src/cadit/occt/step_writer.h
         src/cadit/occt/geometry_iterator.h
+        src/cadit/occt/custom_progress.h
 )
 
 add_executable(STP2GLB ${SOURCES} ${HEADERS})

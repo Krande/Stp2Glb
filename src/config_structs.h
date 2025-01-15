@@ -26,6 +26,7 @@ struct GlobalConfig {
     // Debug parameters
     bool solidOnly;
     int max_geometry_num;
+    int tessellation_timout;
 
     std::vector<std::string> filter_names_include;
     std::vector<std::string> filter_names_exclude;

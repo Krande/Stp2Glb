@@ -14,7 +14,7 @@
 #include "CLI/App.hpp"
 
 // Helper function to process filter names from input or file
-std::vector<std::string> process_filter_names(const std::string& input, const std::string& file_name, bool debug = false)
+std::vector<std::string> process_filter_names(const std::string& input, const std::string& file_name)
 {
     std::vector<std::string> filter_names;
 
@@ -47,15 +47,6 @@ std::vector<std::string> process_filter_names(const std::string& input, const st
         }
     }
 
-    // Debug output
-    if (debug)
-    {
-        std::cout << "Collected Filter Names:" << std::endl;
-        for (const auto& name : filter_names)
-        {
-            std::cout << name << std::endl;
-        }
-    }
 
     return filter_names;
 }
@@ -70,8 +61,9 @@ GlobalConfig process_parameters(CLI::App& app)
     const auto filter_names_file_exclude = app.get_option("--filter-names-file-exclude")->as<std::string>();
 
     // Process include and exclude filter names
-    const auto filter_names_include = process_filter_names(filter_names_include_input, filter_names_file_include, true);
-    const auto filter_names_exclude = process_filter_names(filter_names_exclude_input, filter_names_file_exclude, true);
+    const auto filter_names_include = process_filter_names(filter_names_include_input, filter_names_file_include);
+    const auto filter_names_exclude = process_filter_names(filter_names_exclude_input, filter_names_file_exclude);
+
 
     // Create configuration
     return {
@@ -83,6 +75,7 @@ GlobalConfig process_parameters(CLI::App& app)
         .relativeDeflection = app.get_option("--rel-defl")->as<bool>(),
         .solidOnly = app.get_option("--solid-only")->as<bool>(),
         .max_geometry_num = app.get_option("--max-geometry-num")->as<int>(),
+        .tessellation_timout = app.get_option("--tessellation-timeout")->as<int>(),
         .filter_names_include = filter_names_include,
         .filter_names_exclude = filter_names_exclude,
         .buildConfig = {

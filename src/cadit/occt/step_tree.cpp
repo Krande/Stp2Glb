@@ -315,7 +315,7 @@ std::string ExportHierarchyToJson(const std::vector<std::unique_ptr<ProductNode>
     return oss.str();
 }
 
-void add_geometries_to_nodes(std::vector<std::unique_ptr<ProductNode>>& nodes, const Interface_Graph& theGraph)
+void add_geometries_to_nodes(const std::vector<std::unique_ptr<ProductNode>>& nodes, const Interface_Graph& theGraph)
 {
     for (auto& ref_node : nodes)
     {

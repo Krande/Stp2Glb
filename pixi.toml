@@ -6,8 +6,7 @@ channels = ["https://repo.prefix.dev/adapy-tools", "conda-forge"]
 platforms = ["win-64"]
 
 [environments]
-static = ["static"]
-local = ["local"]
+static = { features=["static"], no-default-feature = true }
 
 [dependencies]
 c-compiler = "*"
@@ -22,7 +21,7 @@ cgal-cpp = "==5.6.1"
 pytest = "==7.3.1"
 python = "3.12.*"
 
-[feature.local.target.win-64.dependencies]
+[target.win-64.dependencies]
 vs2022_win-64 = "*"
 vswhere = "*"
 occt = { version = "==7.8.1", build = "*novtk*debug*", channel = "https://repo.prefix.dev/adapy-tools" }
