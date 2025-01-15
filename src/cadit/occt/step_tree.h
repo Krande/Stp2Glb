@@ -19,6 +19,7 @@
 struct ProcessResult {
     mutable bool added_to_model;
     mutable std::string skip_reason;
+    mutable int geometryIndex;
 };
 
 

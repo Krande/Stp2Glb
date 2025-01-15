@@ -196,6 +196,7 @@ void debug_stp_to_glb(const GlobalConfig &config) {
             if (!should_process_geometry(geometry, node, config)) {
                 std::cout << "Skipping shape: " << node.name << " (Entity: " << node.entityIndex << ")\n";
                 node.processResult.added_to_model = false;
+                node.processResult.geometryIndex = geometryIndex;
                 node.processResult.skip_reason = "Skipped by filter";
                 curr_shape++;
                 continue;
@@ -204,6 +205,7 @@ void debug_stp_to_glb(const GlobalConfig &config) {
             if (!default_reader.TransferEntity(geometry)) {
                 std::cerr << "Error transferring entity" << "\n";
                 node.processResult.added_to_model = false;
+                node.processResult.geometryIndex = geometryIndex;
                 node.processResult.skip_reason = "Error transferring entity";
                 curr_shape++;
                 continue;
@@ -212,6 +214,7 @@ void debug_stp_to_glb(const GlobalConfig &config) {
             if (shape.IsNull()) {
                 std::cerr << "Error converting entity to shape" << "\n";
                 node.processResult.added_to_model = false;
+                node.processResult.geometryIndex = geometryIndex;
                 node.processResult.skip_reason = "Unable to convert entity to shape";
                 curr_shape++;
                 continue;
@@ -228,6 +231,7 @@ void debug_stp_to_glb(const GlobalConfig &config) {
                 if (!perform_tessellation_with_timeout(shape, meshParams, config.tessellation_timout)) {
                     std::cout << "Tessellation timed out.\n";
                     node.processResult.added_to_model = false;
+                    node.processResult.geometryIndex = geometryIndex;
                     node.processResult.skip_reason = "Tessellation timed out";
                     curr_shape++;
                     continue;
@@ -246,4 +250,25 @@ void debug_stp_to_glb(const GlobalConfig &config) {
 
     const std::filesystem::path out_file = config.glbFile.parent_path() / config.glbFile.stem().concat("-debug.stp");
     step_store.to_step(out_file.string().c_str());
+
+    // iterate over all nodes that werent added to the model and save the list to json
+    const std::filesystem::path out_json_log_file = config.glbFile.parent_path() / config.glbFile.stem().concat(
+                                                    "-log.json");
+    std::ofstream log_file(out_json_log_file);
+    log_file << "[\n";
+
+    for (const auto &node: GeometryRange(roots)) {
+        if (!node.processResult.added_to_model && node.processResult.geometryIndex != 0) {
+            log_file << "{\n";
+            log_file << "\"name\": \"" << node.name << "\",\n";
+            log_file << "\"entityIndex\": " << node.entityIndex << ",\n";
+            log_file << "\"geometryIndex\": " << node.processResult.geometryIndex << ",\n";
+            log_file << "\"skipReason\": \"" << node.processResult.skip_reason << "\"\n";
+            log_file << "},\n";
+        }
+    }
+    log_file << "]\n";
+    log_file.close();
+
+
 }
