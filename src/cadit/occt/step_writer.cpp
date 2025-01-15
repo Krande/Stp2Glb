@@ -101,8 +101,7 @@ void StepStore::add_shape(const TopoDS_Shape &shape, const std::string &name,
     // replace the dummy label with the actual shape
 
     // get parent of dummy label
-
-    shape_tool_->RemoveShape(dummy_label, Standard_True);
+    shape_tool_->RemoveComponent(dummy_label);
     const TDF_Label shape_label = shape_tool_->AddShape(shape, Standard_False, Standard_False);
     shape_tool_->AddComponent(parent_label, shape_label, location);
 
@@ -146,6 +145,8 @@ void StepStore::to_step(const std::filesystem::path &step_file) const {
 }
 
 void StepStore::to_glb(const std::filesystem::path &glb_file) const {
+    shape_tool_->UpdateAssemblies();
+
     RWGltf_CafWriter writer(glb_file.c_str(), true); // true for binary format
 
     // Additional file information (can be empty if not needed)
