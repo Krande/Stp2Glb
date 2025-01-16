@@ -38,8 +38,9 @@ requirements:
     - fontconfig
     - if: linux
       then:
-        - xorg-libxt
-        - xorg-x11-proto-devel-cos7-x86_64
+        - xorg-libx11
+        - xorg-xproto
+        - pthread-stubs
     - rapidjson
   run:
     - freetype

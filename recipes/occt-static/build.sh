@@ -2,7 +2,7 @@
 tar --strip-components=1 -xvzf occt-${PKG_VERSION}.tar.gz
 
 cmake -S . -B build  -G Ninja \
-      -D CMAKE_FIND_ROOT_PATH="$PREFIX;$BUILD_PREFIX/$HOST/sysroot;usr" \
+      -D CMAKE_FIND_ROOT_PATH="$PREFIX;$BUILD_PREFIX/$HOST/sysroot;/usr" \
       -D CMAKE_INSTALL_PREFIX:FILEPATH=$PREFIX \
       -D CMAKE_PREFIX_PATH:FILEPATH=$PREFIX \
       -D 3RDPARTY_DIR:FILEPATH=$PREFIX \
@@ -15,7 +15,7 @@ cmake -S . -B build  -G Ninja \
       -D USE_RAPIDJSON:BOOL=ON \
       -D BUILD_RELEASE_DISABLE_EXCEPTIONS:BOOL=OFF \
       -D BUILD_LIBRARY_TYPE="Static" \
-      -D BUILD_SHARED_LIBS:BOOL=OFF \
-      -D QT_HOST_PATH:STRING="${PREFIX}"
+      -D CMAKE_EXE_LINKER_FLAGS="-lpthread -ldl -lm" \
+      -D BUILD_SHARED_LIBS:BOOL=OFF
 
 cmake --build build -- install
