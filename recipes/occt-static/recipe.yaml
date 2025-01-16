@@ -14,7 +14,6 @@ source:
   sha256: 006319a932cb8d76f32455bf4524eca2100657cb0cc65526754fd8da83b3924f
   file_name: ${{ name }}-${{ version }}.tar.gz
 
-
 build:
   number: ${{ build }}
   string: static_h${{ hash }}_${{ build }}
@@ -38,7 +37,9 @@ requirements:
     - freeimage
     - fontconfig
     - if: linux
-      then: xorg-libxt
+      then:
+        - xorg-libxt
+        - xorg-x11-proto-devel-cos7-x86_64
     - rapidjson
   run:
     - freetype

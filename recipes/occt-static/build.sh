@@ -1,5 +1,8 @@
+# extract tar.gz to this dir
+tar --strip-components=1 -xvzf occt-${PKG_VERSION}.tar.gz
+
 cmake -S . -B build  -G Ninja \
-      -D CMAKE_FIND_ROOT_PATH="$PREFIX;$BUILD_PREFIX/$HOST/sysroot" \
+      -D CMAKE_FIND_ROOT_PATH="$PREFIX;$BUILD_PREFIX/$HOST/sysroot;usr" \
       -D CMAKE_INSTALL_PREFIX:FILEPATH=$PREFIX \
       -D CMAKE_PREFIX_PATH:FILEPATH=$PREFIX \
       -D 3RDPARTY_DIR:FILEPATH=$PREFIX \
@@ -8,9 +11,6 @@ cmake -S . -B build  -G Ninja \
       -D CMAKE_BUILD_TYPE:STRING="Release" \
       -D BUILD_RELEASE_DISABLE_EXCEPTIONS=OFF \
       -D USE_VTK:BOOL=OFF \
-      -D 3RDPARTY_VTK_LIBRARY_DIR:FILEPATH=$PREFIX/lib \
-      -D 3RDPARTY_VTK_INCLUDE_DIR:FILEPATH=$PREFIX/include/vtk-9.3 \
-      -D VTK_RENDERING_BACKEND:STRING="OpenGL2" \
       -D USE_FREEIMAGE:BOOL=ON \
       -D USE_RAPIDJSON:BOOL=ON \
       -D BUILD_RELEASE_DISABLE_EXCEPTIONS:BOOL=OFF \

@@ -3,10 +3,14 @@ name = "stp2glb"
 version = "1.0.0"
 description = "A STEP to GLB converter"
 channels = ["https://repo.prefix.dev/adapy-tools", "conda-forge"]
-platforms = ["win-64"]
+platforms = ["win-64", "linux-64"]
 
 [environments]
 static = { features=["static"], no-default-feature = true }
+conda  = { features=["conda"], no-default-feature = true }
+
+[feature.conda.dependencies]
+rattler-build="*"
 
 [dependencies]
 c-compiler = "*"
@@ -48,3 +52,9 @@ occt = { version = "==7.8.1", build = "*static*", channel = "https://repo.prefix
 [feature.static.tasks]
 build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-static", "--fresh"] }
 install = { cmd = ["ninja", "-C", "build/win-local-static", "install"], description = "Install the project" }
+
+[feature.conda.target.win-64.tasks]
+build = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml", "-m","recipes/occt-static/conda_build_config-win.yaml"] }
+
+[feature.conda.target.linux-64.tasks]
+build = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml", "-m","recipes/occt-static/conda_build_config-linux.yaml"] }
