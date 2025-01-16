@@ -64,12 +64,11 @@ GlobalConfig process_parameters(CLI::App& app)
     const auto filter_names_include = process_filter_names(filter_names_include_input, filter_names_file_include);
     const auto filter_names_exclude = process_filter_names(filter_names_exclude_input, filter_names_file_exclude);
 
-
     // Create configuration
     return {
         .stpFile = app.get_option("--stp")->results()[0],
         .glbFile = app.get_option("--glb")->results()[0],
-        .version = app.get_option("--version")->as<int>(),
+        .debug_mode = app.get_option("--debug")->as<bool>(),
         .linearDeflection = app.get_option("--lin-defl")->as<double>(),
         .angularDeflection = app.get_option("--ang-defl")->as<double>(),
         .relativeDeflection = app.get_option("--rel-defl")->as<bool>(),
@@ -79,7 +78,7 @@ GlobalConfig process_parameters(CLI::App& app)
         .filter_names_include = filter_names_include,
         .filter_names_exclude = filter_names_exclude,
         .buildConfig = {
-            .build_bspline_surf = app.get_subcommand("build")->get_option("--b-spline-surf")->as<bool>()
+            .build_bspline_surf = false
         }
     };
 }

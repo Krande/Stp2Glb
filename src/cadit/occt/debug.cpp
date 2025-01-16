@@ -27,52 +27,6 @@
 #include "../../config_structs.h"
 
 
-// Function to perform tessellation with a timeout
-bool perform_tessellation_with_timeout(const TopoDS_Shape &shape, const IMeshTools_Parameters &meshParams,
-                                       const int timeoutSeconds) {
-    // Create a custom progress indicator
-    Handle(CustomProgressIndicator) progress = new CustomProgressIndicator();
-
-    // Create a progress range with a default name and range
-    Message_ProgressRange progressRange = progress->Start();
-
-    // Flag to track if the operation timed out
-    std::atomic<bool> tessellationComplete = false;
-
-    // Launch tessellation in a separate thread
-    std::thread tessellationThread([&]() {
-        try {
-            // Run tessellation with progress monitoring
-            BRepMesh_IncrementalMesh mesh(shape, meshParams, progressRange);
-
-            // Mark as complete
-            tessellationComplete = true;
-        } catch (const Standard_Failure &e) {
-            std::cerr << "Tessellation failed: " << e.GetMessageString() << "\n";
-        }
-    });
-
-    // Monitor the tessellation thread for timeout
-    const auto start = std::chrono::steady_clock::now();
-    while (std::chrono::steady_clock::now() - start < std::chrono::seconds(timeoutSeconds)) {
-        if (tessellationComplete) {
-            // Tessellation finished successfully
-            std::cout << "Tessellation completed successfully.\n";
-            tessellationThread.join();
-            return true;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Poll every 50 ms
-    }
-
-    // Timeout occurred, cancel tessellation
-    progress->Cancel();
-    if (tessellationThread.joinable()) {
-        tessellationThread.join();
-    }
-
-    return false; // Tessellation timed out
-}
-
 bool should_process_geometry(const Handle(Standard_Transient) &brep, const ProductNode &node,
                              const GlobalConfig &config) {
     if (!brep->IsKind(STANDARD_TYPE(StepShape_SolidModel))) {

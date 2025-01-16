@@ -17,7 +17,7 @@ struct GlobalConfig {
     std::filesystem::path glbFile;
 
     // Conversion parameters
-    int version;
+    bool debug_mode;
 
     double linearDeflection;
     double angularDeflection;

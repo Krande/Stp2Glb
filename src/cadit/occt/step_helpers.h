@@ -65,4 +65,7 @@ Interface_EntityIterator Get_Associated_SolidModel_BiDirectional(
 
 gp_Trsf get_product_transform(TopoDS_Shape& shape, const Handle(StepBasic_Product)& product);
 
+bool perform_tessellation_with_timeout(const TopoDS_Shape &shape, const IMeshTools_Parameters &meshParams,
+                                       const int timeoutSeconds);
+
 #endif //STEP_HELPERS_H

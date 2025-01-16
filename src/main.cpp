@@ -24,7 +24,7 @@ void print_status(const GlobalConfig config) {
     std::cout << "Angular Deflection: " << config.angularDeflection << "\n";
     std::cout << "Relative Deflection: " << config.relativeDeflection << "\n\n";
     std::cout << "Debug Parameters: " << "\n";
-    std::cout << "Version: " << config.version << "\n";
+    std::cout << "Debug Mode: " << config.debug_mode << "\n";
     std::cout << "Solid Only: " << config.solidOnly << "\n";
     std::cout << "Max Geometry Num: " << config.max_geometry_num << "\n";
     std::cout << "Tessellation Timeout: " << config.tessellation_timout << "\n\n";
@@ -57,8 +57,9 @@ int main(int argc, char* argv[])
     app.add_option("--lin-defl", "Linear deflection")->default_val(0.1)->check(CLI::Range(0.0, 1.0));
     app.add_option("--ang-defl", "Angular deflection")->default_val(0.5)->check(CLI::Range(0.0, 1.0));
     app.add_flag("--rel-defl", "Relative deflection");
-    app.add_option("--version", "Version of the converter")->default_val(1)->check(CLI::Range(0, 3));
-    app.add_option("--solid-only", "Solid only")->default_val(false);
+
+    app.add_flag("--debug", "Debug mode. More robust but slower");
+    app.add_flag("--solid-only", "Solid only");
     app.add_option("--max-geometry-num", "Maximum number of geometries to convert")->default_val(0);
     app.add_option("--filter-names-include", "Include Filter name. Command separated list")->default_val("");
     app.add_option("--filter-names-file-include", "Include Filter name file")->default_val("");
@@ -66,8 +67,8 @@ int main(int argc, char* argv[])
     app.add_option("--filter-names-file-exclude", "Exclude Filter name file")->default_val("");
     app.add_option("--tessellation-timeout", "Tessellation timeout")->default_val(30);
 
-    const auto build = app.add_subcommand("build", "Build");
-    build->add_option("--b-spline-surf", "Build a B-Spline surface")->default_val(false);
+    // const auto build = app.add_subcommand("build", "Build");
+    // build->add_option("--b-spline-surf", "Build a B-Spline surface")->default_val(false);
 
     CLI11_PARSE(app, argc, argv);
 
@@ -82,14 +83,11 @@ int main(int argc, char* argv[])
         if (config.buildConfig.build_bspline_surf)
             make_a_bspline_surf(config);
 
-        if (config.version == 1)
-            convert_stp_to_glb(config);
-        else if (config.version == 2)
+        if (config.debug_mode == 1)
             debug_stp_to_glb(config);
         else
         {
-            std::cout << "Invalid version number." << "\n";
-            return 1;
+            convert_stp_to_glb(config);
         }
         const auto stop = std::chrono::high_resolution_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);

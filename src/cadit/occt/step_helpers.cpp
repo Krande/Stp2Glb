@@ -31,7 +31,10 @@
 #include <StepBasic_Product.hxx>
 #include <StepRepr_Representation.hxx>
 #include <TCollection_HAsciiString.hxx>
+#include <thread>
 #include <unordered_set>
+
+#include "custom_progress.h"
 
 Handle(Standard_Transient) get_entity_from_graph_path(const Handle(Standard_Transient)& entity,
                                                       Interface_Graph& theGraph, std::vector<std::string> path)
@@ -688,4 +691,51 @@ Interface_EntityIterator Get_Associated_SolidModel_BiDirectional(
 
     // Now build an iterator from the matched sequence
     return {matchedEntities};
+}
+
+
+// Function to perform tessellation with a timeout
+bool perform_tessellation_with_timeout(const TopoDS_Shape &shape, const IMeshTools_Parameters &meshParams,
+                                       const int timeoutSeconds) {
+    // Create a custom progress indicator
+    const Handle(CustomProgressIndicator) progress = new CustomProgressIndicator();
+
+    // Create a progress range with a default name and range
+    const Message_ProgressRange progressRange = progress->Start();
+
+    // Flag to track if the operation timed out
+    std::atomic<bool> tessellationComplete = false;
+
+    // Launch tessellation in a separate thread
+    std::thread tessellationThread([&]() {
+        try {
+            // Run tessellation with progress monitoring
+            BRepMesh_IncrementalMesh mesh(shape, meshParams, progressRange);
+
+            // Mark as complete
+            tessellationComplete = true;
+        } catch (const Standard_Failure &e) {
+            std::cerr << "Tessellation failed: " << e.GetMessageString() << "\n";
+        }
+    });
+
+    // Monitor the tessellation thread for timeout
+    const auto start = std::chrono::steady_clock::now();
+    while (std::chrono::steady_clock::now() - start < std::chrono::seconds(timeoutSeconds)) {
+        if (tessellationComplete) {
+            // Tessellation finished successfully
+            std::cout << "Tessellation completed successfully.\n";
+            tessellationThread.join();
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Poll every 50 ms
+    }
+
+    // Timeout occurred, cancel tessellation
+    progress->Cancel();
+    if (tessellationThread.joinable()) {
+        tessellationThread.join();
+    }
+
+    return false; // Tessellation timed out
 }

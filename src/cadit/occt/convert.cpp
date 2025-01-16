@@ -10,6 +10,9 @@
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <filesystem>
 #include <XCAFDoc_ShapeTool.hxx>
+
+#include "custom_progress.h"
+#include "step_helpers.h"
 #include "../../config_structs.h"
 
 void convert_stp_to_glb(const GlobalConfig& config)
@@ -23,6 +26,18 @@ void convert_stp_to_glb(const GlobalConfig& config)
     reader.SetGDTMode(true);
     reader.SetMatMode(true);
     reader.SetViewMode(false);
+
+    // Mesh parameters
+    IMeshTools_Parameters meshParams;
+    meshParams.Angle = config.angularDeflection;
+    meshParams.Deflection = config.linearDeflection;
+    meshParams.Relative = config.relativeDeflection;
+    meshParams.MinSize = 0.1;
+    meshParams.AngleInterior = 0.5;
+    meshParams.DeflectionInterior = 0.1;
+    meshParams.CleanModel = Standard_True;
+    meshParams.InParallel = Standard_True;
+    meshParams.AllowQualityDecrease = Standard_True;
 
     // Read the STEP file
     auto start = std::chrono::high_resolution_clock::now();
@@ -39,8 +54,12 @@ void convert_stp_to_glb(const GlobalConfig& config)
     start = std::chrono::high_resolution_clock::now();
     const Handle(TDocStd_Document) doc = new TDocStd_Document("MDTV-XCAF");
 
-    if (!reader.Transfer(doc))
+    Handle(CustomProgressIndicator) progress_indicator = new CustomProgressIndicator();
+
+    // Create a progress range with a default name and range
+    if (Message_ProgressRange progressRange = progress_indicator->Start(); !reader.Transfer(doc, progressRange))
         throw std::runtime_error("Error transferring data to document");
+    progress_indicator->Cancel();
 
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration<double>(stop - start).count();
@@ -55,9 +74,9 @@ void convert_stp_to_glb(const GlobalConfig& config)
     start = std::chrono::high_resolution_clock::now();
     for (Standard_Integer i = 1; i <= labelSeq.Length(); ++i)
     {
-        TopoDS_Shape shape = shapeTool->GetShape(labelSeq.Value(i));
+        TopoDS_Shape shape = XCAFDoc_ShapeTool::GetShape(labelSeq.Value(i));
         std::cout << "Tessellating shape " << i << " of " << labelSeq.Length() << std::endl;
-        BRepMesh_IncrementalMesh(shape, config.linearDeflection, config.relativeDeflection, config.angularDeflection, false);
+        perform_tessellation_with_timeout(shape, meshParams, config.tessellation_timout);
     }
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration<double>(stop - start).count();

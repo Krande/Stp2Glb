@@ -23,6 +23,7 @@ OPTION(BUILD_STATIC "Build STP2GLB as a static executable." OFF)
 
 if (BUILD_STATIC)
     message(STATUS "Building STP2GLB as a static executable.")
+
     # Force static linking
     set(BUILD_SHARED_LIBS OFF) # Disable shared libraries
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".a") # Prefer static libraries
@@ -102,8 +103,11 @@ if (BUILD_STATIC)
     message(STATUS "CLI11_DIR: ${CLI11_DIR}")
     target_include_directories(STP2GLB PRIVATE ${CLI11_DIR})
     target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS} -static)
+    set_property(TARGET STP2GLB PROPERTY
+  MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else()
     target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS})
+
 endif()
 
 # install to executable into the bin dir
