@@ -19,7 +19,7 @@ To build the STP2GLB executable using shared dependencies, run the following com
 pixi run build && pixi run install
 ```
 
-To build the STP2GLB executable using static dependencies, run the following command: 
+To build the STP2GLB executable using static dependencies, run the following command:
 ```bash
 pixi run -e static build && pixi run -e static install
 ```

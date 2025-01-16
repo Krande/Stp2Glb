@@ -18,7 +18,6 @@ set(ADA_CPP_LINK_LIBS)
 
 include(cmake/deps_occ.cmake)
 
-
 # Add an option to enable static builds
 OPTION(BUILD_STATIC "Build STP2GLB as a static executable." OFF)
 
@@ -32,9 +31,15 @@ if (BUILD_STATIC)
     # For MSVC, ensure the static runtime is used
     if (MSVC)
         foreach(flag_var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-                        CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-            string(REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+                CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+            set(${flag_var} "${${flag_var}} /MT")
         endforeach()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MT")
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
     endif()
 
     # Force dependencies to link statically
@@ -54,8 +59,8 @@ else()
     include(cmake/deps_cgal.cmake)
 endif()
 
-add_definitions(-DWIN32_LEAN_AND_MEAN)
-add_definitions(-DNOMINMAX)
+#add_definitions(-DWIN32_LEAN_AND_MEAN)
+#add_definitions(-DNOMINMAX)
 
 # Install the C++ executable
 set(SOURCES
@@ -93,14 +98,12 @@ add_executable(STP2GLB ${SOURCES} ${HEADERS})
 set_target_properties(STP2GLB PROPERTIES
         INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/bin")
 
-target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS})
-
-if (BUILD_STATIC AND MSVC)
-#    target_link_options(STP2GLB PUBLIC /NODEFAULTLIB:MSVCRT)
-    target_link_options(STP2GLB PUBLIC /NODEFAULTLIB:MSVCRT /NODEFAULTLIB:LIBCMT)
-    target_include_directories(STP2GLB PRIVATE
-        $ENV{LIBRARY_PREFIX}/include
-    )
+if (BUILD_STATIC)
+    message(STATUS "CLI11_DIR: ${CLI11_DIR}")
+    target_include_directories(STP2GLB PRIVATE ${CLI11_DIR})
+    target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS} -static)
+else()
+    target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS})
 endif()
 
 # install to executable into the bin dir

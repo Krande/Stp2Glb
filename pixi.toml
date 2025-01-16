@@ -33,10 +33,17 @@ build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-release", "--fresh"]
 install = { cmd = ["ninja", "-C", "build/win-local-release", "install"], description = "Install the project" }
 test = { cmd = ["ctest"], cwd="build/win-local-release", description = "Run the tests" }
 
+[feature.static.dependencies]
+cmake = "==3.30.5"
+cli11 = "*"
+ninja = "*"
+nlohmann_json = "*"
+
 [feature.static.target.win-64.dependencies]
 vs2022_win-64 = "*"
 vswhere = "*"
 occt = { version = "==7.8.1", build = "*static*", channel = "https://repo.prefix.dev/adapy-tools" }
+#occt = { version = "==7.8.1", build = "*novtk*debug*", channel = "https://repo.prefix.dev/adapy-tools" }
 
 [feature.static.tasks]
 build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-static", "--fresh"] }
