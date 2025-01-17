@@ -31,34 +31,34 @@ if (BUILD_STATIC)
 
     # For MSVC, ensure the static runtime is used
     if (MSVC)
-        foreach(flag_var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+        foreach (flag_var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
                 CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
             set(${flag_var} "${${flag_var}} /MT")
-        endforeach()
+        endforeach ()
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
         set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
         set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MT")
         set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
         set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
-    endif()
+    endif ()
 
     # Force dependencies to link statically
     set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE) # Prefer CMake config files
-    foreach(lib ${ADA_CPP_LINK_LIBS})
+    foreach (lib ${ADA_CPP_LINK_LIBS})
         if (TARGET ${lib})
             set_target_properties(${lib} PROPERTIES
-                BUILD_WITH_INSTALL_RPATH TRUE
-                LINK_SEARCH_START_STATIC TRUE
-                LINK_SEARCH_END_STATIC TRUE
+                    BUILD_WITH_INSTALL_RPATH TRUE
+                    LINK_SEARCH_START_STATIC TRUE
+                    LINK_SEARCH_END_STATIC TRUE
             )
-        endif()
-    endforeach()
-else()
+        endif ()
+    endforeach ()
+else ()
     include(cmake/deps_ifc.cmake)
     include(cmake/deps_stepcode.cmake)
     include(cmake/deps_cgal.cmake)
-endif()
+endif ()
 
 #add_definitions(-DWIN32_LEAN_AND_MEAN)
 #add_definitions(-DNOMINMAX)
@@ -103,12 +103,12 @@ if (BUILD_STATIC)
     message(STATUS "CLI11_DIR: ${CLI11_DIR}")
     target_include_directories(STP2GLB PRIVATE ${CLI11_DIR})
     target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS} -static)
-    set_property(TARGET STP2GLB PROPERTY
-  MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-else()
+    if (MSVC)
+        set_property(TARGET STP2GLB PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif ()
+else ()
     target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS})
-
-endif()
+endif ()
 
 # install to executable into the bin dir
 message(STATUS "Installing executable to ${EXE_BIN_DIR}")
