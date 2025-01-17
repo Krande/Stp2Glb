@@ -110,11 +110,15 @@ if (BUILD_STATIC)
         target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS} pthread -static)
     else ()
         target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS} -static)
-    endif()
+    endif ()
     set_property(TARGET STP2GLB PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else ()
     target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS})
 endif ()
+
+if (UNIX)
+    add_link_options("-fuse-ld=lld")
+endif()
 
 # install to executable into the bin dir
 message(STATUS "Installing executable to ${EXE_BIN_DIR}")
