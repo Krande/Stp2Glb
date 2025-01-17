@@ -5,7 +5,7 @@
 #ifndef CONFIG_STRUCTS_H
 #define CONFIG_STRUCTS_H
 
-
+#include <vector>
 #include <filesystem>
 
 struct BuildConfig {

@@ -14,10 +14,8 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_PREFIX_PATH": "$env{LIBRARY_PREFIX};$env{LIBRARY_PREFIX}/include;$env{LIBRARY_PREFIX}/lib;$env{LIBRARY_PREFIX}/bin",
         "CMAKE_INSTALL_PREFIX": "$env{LIBRARY_PREFIX}",
-        "CGAL_DIR": "$env{LIBRARY_PREFIX}/lib/cmake/CGAL",
         "OpenCASCADE_DIR": "$env{LIBRARY_PREFIX}/lib/cmake/opencascade",
         "OpenCASCADE_INCLUDE_DIR": "$env{LIBRARY_PREFIX}/include/opencascade",
-        "STEPCODE_INCLUDE_DIR": "$env{LIBRARY_PREFIX}/include/stepcode",
         "BUILD_TESTING": "ON",
         "CONDA_LOCAL_DEV": "ON"
       }
@@ -27,7 +25,9 @@
       "inherits": "win-local",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": "ON"
+        "BUILD_TESTING": "ON",
+        "STEPCODE_INCLUDE_DIR": "$env{LIBRARY_PREFIX}/include/stepcode",
+        "CGAL_DIR": "$env{LIBRARY_PREFIX}/lib/cmake/CGAL"
       }
     },
     {
@@ -41,6 +41,25 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CLI11_DIR": "$env{LIBRARY_PREFIX}/include",
         "CMAKE_PREFIX_PATH": "$env{LIBRARY_PREFIX};$env{LIBRARY_PREFIX}/include;$env{LIBRARY_PREFIX}/lib;$env{LIBRARY_PREFIX}/bin",
+        "CMAKE_INSTALL_PREFIX": "$env{LIBRARY_PREFIX}",
+        "BUILD_TESTING": "OFF",
+        "BUILD_STATIC": "ON",
+        "BUILD_SHARED_LIBS": "OFF",
+        "CONDA_LOCAL_DEV": "OFF"
+      }
+    },
+    {
+      "name": "win-local-static_mingw",
+      "inherits": "win-local",
+      "environment": {
+        "PREFIX": "${sourceDir}/.pixi/envs/static_mingw",
+        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/static_mingw/Library",
+        "CXX": "x86_64-w64-mingw32-g++"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CLI11_DIR": "$env{LIBRARY_PREFIX}/include",
+        "CMAKE_PREFIX_PATH": "$env{LIBRARY_PREFIX}:$env{LIBRARY_PREFIX}/include:$env{LIBRARY_PREFIX}/lib:$env{LIBRARY_PREFIX}/bin",
         "CMAKE_INSTALL_PREFIX": "$env{LIBRARY_PREFIX}",
         "BUILD_TESTING": "OFF",
         "BUILD_STATIC": "ON",

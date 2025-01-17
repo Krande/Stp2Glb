@@ -7,6 +7,7 @@ platforms = ["win-64", "linux-64"]
 
 [environments]
 static = { features=["static"], no-default-feature = true }
+static-mingw = { features=["static-mingw", "static"], no-default-feature = true }
 conda  = { features=["conda"], no-default-feature = true }
 
 [feature.conda.dependencies]
@@ -55,9 +56,24 @@ vswhere = "*"
 occt = { version = "==7.8.1", build = "*static*", channel = "https://repo.prefix.dev/adapy-tools" }
 #occt = { version = "==7.8.1", build = "*novtk*debug*", channel = "https://repo.prefix.dev/adapy-tools" }
 
+[feature.static-mingw.target.win-64.dependencies]
+cmake = "==3.30.5"
+cli11 = "*"
+ninja = "*"
+nlohmann_json = "*"
+m2w64-sysroot_win-64 = "*"
+gcc_win-64 = "13*"
+gxx_win-64 = "13*"
+ld_impl_win-64 = "*"
+occt = { version = "==7.8.1", build = "*static*", channel = "https://repo.prefix.dev/adapy-tools" }
+
 [feature.static.tasks]
 build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-static", "--fresh"] }
 install = { cmd = ["ninja", "-C", "build/win-local-static", "install"], description = "Install the project" }
+
+[feature.static-mingw.tasks]
+build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-static_mingw", "--fresh"] }
+install = { cmd = ["ninja", "-C", "build/win-local-static_mingw", "install"], description = "Install the project" }
 
 [feature.conda.target.win-64.tasks]
 build = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml", "-m","recipes/occt-static/conda_build_config-win.yaml"] }
