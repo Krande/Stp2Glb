@@ -2,18 +2,14 @@
 
 #pragma once
 
-#include <iostream>
-
 #include <BRep_Builder.hxx>
-#include <Interface_Static.hxx>
-#include <STEPCAFControl_Writer.hxx>
+#include <filesystem>
 #include <TDocStd_Application.hxx>
 #include <TDocStd_Document.hxx>
 #include <TopoDS_Compound.hxx>
 #include <TDF_Label.hxx>
 #include <XCAFDoc_ColorTool.hxx>
 #include <XCAFDoc_ShapeTool.hxx>
-#include "helpers.h"
 #include "step_tree.h"
 #include "../../geom/Color.h"
 

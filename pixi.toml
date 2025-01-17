@@ -72,8 +72,8 @@ build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-static", "--fresh"] 
 install = { cmd = ["ninja", "-C", "build/win-local-static", "install"], description = "Install the project" }
 
 [feature.static-mingw.tasks]
-build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-static_mingw", "--fresh"] }
-install = { cmd = ["ninja", "-C", "build/win-local-static_mingw", "install"], description = "Install the project" }
+build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-static-mingw", "--fresh"] }
+install = { cmd = ["ninja", "-C", "build/win-local-static-mingw", "install"], description = "Install the project" }
 
 [feature.conda.target.win-64.tasks]
 build = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml", "-m","recipes/occt-static/conda_build_config-win.yaml"] }

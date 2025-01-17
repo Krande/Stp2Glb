@@ -19,9 +19,9 @@
 #include <Interface_Static.hxx>
 #include <Interface_Graph.hxx>
 #include <StepBasic_Product.hxx>
-#include <TDataStd_Name.hxx>
 
 #include "custom_progress.h"
+#include "helpers.h"
 #include "step_helpers.h"
 #include "step_tree.h"
 #include "../../config_structs.h"

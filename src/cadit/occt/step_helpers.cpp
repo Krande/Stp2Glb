@@ -35,6 +35,7 @@
 #include <unordered_set>
 
 #include "custom_progress.h"
+#include "helpers.h"
 
 Handle(Standard_Transient) get_entity_from_graph_path(const Handle(Standard_Transient)& entity,
                                                       Interface_Graph& theGraph, std::vector<std::string> path)

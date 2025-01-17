@@ -49,11 +49,11 @@
       }
     },
     {
-      "name": "win-local-static_mingw",
+      "name": "win-local-static-mingw",
       "inherits": "win-local",
       "environment": {
-        "PREFIX": "${sourceDir}/.pixi/envs/static_mingw",
-        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/static_mingw/Library",
+        "PREFIX": "${sourceDir}/.pixi/envs/static-mingw",
+        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/static-mingw/Library",
         "CXX": "x86_64-w64-mingw32-g++"
       },
       "cacheVariables": {
