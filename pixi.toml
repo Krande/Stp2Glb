@@ -48,6 +48,8 @@ ninja = "*"
 nlohmann_json = "*"
 
 [feature.static.target.linux-64.dependencies]
+freetype = "*"
+freeimage = "*"
 occt = { version = "==7.8.1", build = "*static*", channel = "https://repo.prefix.dev/adapy-tools" }
 
 [feature.static.target.win-64.dependencies]

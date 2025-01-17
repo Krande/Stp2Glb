@@ -19,7 +19,8 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.39.2
+          pixi-version: v0.40.2
+          activate-environment: conda
           cache: true
 
       - name: Build
@@ -27,7 +28,7 @@ jobs:
           pixi run -e conda build
 
       - name: Upload all packages
-        shell: bash
+        shell: pixi run bash -e {0}
         run: |
           shopt -s nullglob
           EXIT_CODE=0
