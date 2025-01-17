@@ -705,7 +705,7 @@ bool perform_tessellation_with_timeout(const TopoDS_Shape &shape, const IMeshToo
     const Message_ProgressRange progressRange = progress->Start();
 
     // Flag to track if the operation timed out
-    std::atomic<bool> tessellationComplete = false;
+    std::atomic tessellationComplete = false;
 
     // Launch tessellation in a separate thread
     std::thread tessellationThread([&]() {

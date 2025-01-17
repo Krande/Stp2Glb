@@ -31,7 +31,7 @@ add_test(NAME debug_as1_filter COMMAND STP2GLB
         --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/as1-oc-214-filtered.glb
         --debug
         --solid-only
-        --filter-names="l-bracket"
+        --filter-names-include="l-bracket"
         WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/bin"
 )
 

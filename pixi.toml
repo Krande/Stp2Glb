@@ -7,7 +7,7 @@ platforms = ["win-64", "linux-64"]
 
 [environments]
 static = { features=["static"], no-default-feature = true }
-static-mingw = { features=["static-mingw", "static"], no-default-feature = true }
+static-mingw = { features=["static-mingw"], no-default-feature = true }
 conda  = { features=["conda"], no-default-feature = true }
 
 [feature.conda.dependencies]
@@ -56,7 +56,6 @@ occt = { version = "==7.8.1", build = "*static*", channel = "https://repo.prefix
 vs2022_win-64 = "*"
 vswhere = "*"
 occt = { version = "==7.8.1", build = "*static*", channel = "https://repo.prefix.dev/adapy-tools" }
-#occt = { version = "==7.8.1", build = "*novtk*debug*", channel = "https://repo.prefix.dev/adapy-tools" }
 
 [feature.static-mingw.target.win-64.dependencies]
 cmake = "==3.30.5"
@@ -67,7 +66,7 @@ m2w64-sysroot_win-64 = "*"
 gcc_win-64 = "13*"
 gxx_win-64 = "13*"
 ld_impl_win-64 = "*"
-occt = { version = "==7.8.1", build = "*static*", channel = "https://repo.prefix.dev/adapy-tools" }
+#occt = { version = "==7.8.1", build = "*static*", channel = "https://repo.prefix.dev/adapy-tools" }
 
 [feature.static.target.win-64.tasks]
 build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-static", "--fresh"] }
