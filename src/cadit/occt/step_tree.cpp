@@ -25,7 +25,7 @@
 #include <gp_Ax1.hxx>
 #include <gp_Ax3.hxx>
 #include <stack>
-#include <StepGeom_Axis2Placement3D.hxx>
+#include <StepGeom_Axis2Placement3d.hxx>
 #include <StepGeom_CartesianPoint.hxx>
 #include <StepGeom_Direction.hxx>
 

@@ -17,7 +17,7 @@
 #include "step_helpers.h"
 
 #include <Interface_Graph.hxx>
-#include <StepGeom_Axis2Placement3D.hxx>
+#include <StepGeom_Axis2Placement3d.hxx>
 #include <StepGeom_CartesianPoint.hxx>
 #include <StepGeom_Direction.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
