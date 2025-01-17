@@ -105,7 +105,12 @@ set_target_properties(STP2GLB PROPERTIES
 if (BUILD_STATIC)
     message(STATUS "CLI11_DIR: ${CLI11_DIR}")
     target_include_directories(STP2GLB PRIVATE ${CLI11_DIR})
-    target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS} -static)
+
+    if (UNIX)
+        target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS} pthread -static)
+    else ()
+        target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS} -static)
+    endif()
     set_property(TARGET STP2GLB PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else ()
     target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS})

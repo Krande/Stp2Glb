@@ -80,6 +80,7 @@
         "CMAKE_INSTALL_PREFIX": "$env{PREFIX}",
         "OpenCASCADE_DIR": "$env{PREFIX}/lib/cmake/opencascade",
         "OpenCASCADE_INCLUDE_DIR": "$env{PREFIX}/include/opencascade",
+        "CMAKE_EXE_LINKER_FLAGS": "-lpthread -ldl -lm",
         "BUILD_TESTING": "OFF",
         "BUILD_STATIC": "ON",
         "CONDA_LOCAL_DEV": "ON"
