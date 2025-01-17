@@ -16,7 +16,7 @@ source:
 
 build:
   number: ${{ build }}
-  string: static_h${{ hash }}_${{ build }}
+  string: static_novtk_h${{ hash }}_${{ build }}
 
 requirements:
   build:
@@ -32,6 +32,7 @@ requirements:
         - ${{ cdt('mesa-libgl-devel') }}
         - ${{ cdt('libxi-devel') }}
         - ${{ cdt('libxext-devel') }}
+#        - lld
   host:
     - freetype
     - freeimage

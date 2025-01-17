@@ -1,8 +1,11 @@
 # extract tar.gz to this dir
 tar --strip-components=1 -xvzf occt-${PKG_VERSION}.tar.gz
 
+# Failing on exptocasexe-undefined-reference
+# https://dev.opencascade.org/content/installing-occt-libraries-static-libraries-fails-ubuntu-2204-exptocasexe-undefined-reference
+
 cmake -S . -B build  -G Ninja \
-      -D CMAKE_FIND_ROOT_PATH="$PREFIX;$BUILD_PREFIX/$HOST/sysroot;/usr" \
+      -D CMAKE_FIND_ROOT_PATH="$PREFIX;$BUILD_PREFIX/$HOST/sysroot" \
       -D CMAKE_INSTALL_PREFIX:FILEPATH=$PREFIX \
       -D CMAKE_PREFIX_PATH:FILEPATH=$PREFIX \
       -D 3RDPARTY_DIR:FILEPATH=$PREFIX \
@@ -15,6 +18,8 @@ cmake -S . -B build  -G Ninja \
       -D USE_RAPIDJSON:BOOL=ON \
       -D BUILD_RELEASE_DISABLE_EXCEPTIONS:BOOL=OFF \
       -D BUILD_LIBRARY_TYPE="Static" \
+      -D CMAKE_VERBOSE_MAKEFILE:BOOL=ON \
+      -D BUILD_MODULE_DETools:BOOL=OFF \
       -D CMAKE_EXE_LINKER_FLAGS="-lpthread -ldl -lm" \
       -D BUILD_SHARED_LIBS:BOOL=OFF
 

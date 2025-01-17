@@ -3,7 +3,6 @@ name: ci-build-and-release
 # bump 1
 on:
   workflow_dispatch:
-  push:
 
 jobs:
   build:
