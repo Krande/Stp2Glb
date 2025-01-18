@@ -1,8 +1,9 @@
-name: ci-occt-static-build
+name: ci-stepcode-static-build
 
 # bump 1
 on:
   workflow_dispatch:
+  push:
 
 permissions:
   contents: read
@@ -28,7 +29,7 @@ jobs:
 
       - name: Build
         run: |
-          pixi run -e conda build-occt
+          pixi run -e conda build
 
       - name: Upload all packages
         shell: pixi run bash -e {0}

@@ -85,6 +85,25 @@
         "BUILD_STATIC": "ON",
         "CONDA_LOCAL_DEV": "ON"
       }
+    },
+    {
+      "name": "linux-local",
+      "inherits": "win-local",
+      "environment": {
+        "PREFIX": "${sourceDir}/.pixi/envs/default"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CLI11_DIR": "$env{PREFIX}/include",
+        "CMAKE_PREFIX_PATH": "$env{PREFIX}:$env{PREFIX}/include:$env{PREFIX}/lib:$env{PREFIX}/bin",
+        "CMAKE_INSTALL_PREFIX": "$env{PREFIX}",
+        "OpenCASCADE_DIR": "$env{PREFIX}/lib/cmake/opencascade",
+        "OpenCASCADE_INCLUDE_DIR": "$env{PREFIX}/include/opencascade",
+        "CMAKE_EXE_LINKER_FLAGS": "-lpthread -ldl -lm",
+        "BUILD_TESTING": "OFF",
+        "BUILD_STATIC": "OFF",
+        "CONDA_LOCAL_DEV": "ON"
+      }
     }
   ]
 }

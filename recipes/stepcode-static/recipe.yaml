@@ -21,6 +21,8 @@ requirements:
   build:
     - ${{ compiler('cxx') }}
     - ${{ stdlib("c") }}
+    - if: unix
+      then: lld
     - cmake
     - ninja
   run_exports:

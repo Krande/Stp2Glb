@@ -27,7 +27,7 @@ pytest = "==7.3.1"
 python = "3.12.*"
 
 [target.linux-64.dependencies]
-occt = { version = "==7.8.1" }
+occt = { version = "==7.8.1", build="*novtk*" }
 
 [target.win-64.dependencies]
 vs2022_win-64 = "*"
@@ -41,6 +41,12 @@ build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-release", "--fresh"]
 install = { cmd = ["ninja", "-C", "build/win-local-release", "install"], description = "Install the project" }
 test = { cmd = ["ctest"], cwd="build/win-local-release", description = "Run the tests" }
 
+
+[target.linux-64.tasks]
+build = { cmd=["cmake","-G","Ninja", "--preset", "linux-local", "--fresh"] }
+install = { cmd = ["ninja", "-C", "build/linux-local", "install"], description = "Install the project" }
+test = { cmd = ["ctest"], cwd="build/linux-local", description = "Run the tests" }
+
 [feature.static.dependencies]
 cmake = "==3.30.5"
 cli11 = "*"
@@ -52,7 +58,7 @@ c-compiler = "*"
 cxx-compiler = "*"
 freetype = "*"
 freeimage = "*"
-occt = { version = "==7.8.1", build = "*static*", channel = "https://repo.prefix.dev/adapy-tools" }
+occt = { version = "==7.8.1", build = "*static_novtk*", channel = "https://repo.prefix.dev/adapy-tools" }
 
 [feature.static.target.win-64.dependencies]
 vs2022_win-64 = "*"
@@ -87,4 +93,5 @@ build = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml"
 upload = { cmd=["rattler-build", "upload", "-c", "adapy-tools"]}
 
 [feature.conda.target.linux-64.tasks]
-build = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml", "-m","recipes/occt-static/conda_build_config-linux.yaml"] }
+build-occt = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml", "-m","recipes/occt-static/conda_build_config-linux.yaml"] }
+build-stepcode = { cmd=["rattler-build", "build", "-r", "recipes/stepcode-static/recipe.yaml", "-m","recipes/stepcode-static/conda_build_config-linux.yaml"] }

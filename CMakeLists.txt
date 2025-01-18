@@ -107,18 +107,17 @@ if (BUILD_STATIC)
     target_include_directories(STP2GLB PRIVATE ${CLI11_DIR})
 
     if (UNIX)
-        target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS} pthread -static)
+        message(STATUS "Setting static compilation rules for unix")
+        add_link_options("-fuse-ld=lld")
+        target_link_libraries(STP2GLB PRIVATE ${ADA_CPP_LINK_LIBS} pthread -static)
     else ()
         target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS} -static)
+        set_property(TARGET STP2GLB PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif ()
-    set_property(TARGET STP2GLB PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 else ()
     target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS})
 endif ()
-
-if (UNIX)
-    add_link_options("-fuse-ld=lld")
-endif()
 
 # install to executable into the bin dir
 message(STATUS "Installing executable to ${EXE_BIN_DIR}")
