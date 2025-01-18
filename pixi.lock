@@ -363,7 +363,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/libzlib-1.3.1-h2466b09_2.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/ninja-1.12.1-hc790b64_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/nlohmann_json-3.11.3-he0c23c2_1.conda
-      - conda: https://repo.prefix.dev/adapy-tools/win-64/occt-7.8.1-static_h49e36cd_3.conda
+      - conda: https://repo.prefix.dev/adapy-tools/win-64/occt-7.8.1-static_novtk_h49e36cd_3.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/openexr-3.3.2-h3924f79_1.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/openjpeg-2.5.3-h4d64b90_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/openssl-3.4.0-ha4e3fda_1.conda
@@ -1639,8 +1639,6 @@ packages:
   - libxml2 >=2.13.5,<3.0a0
   - libzlib >=1.3.1,<2.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: linux
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   size: 40132862
@@ -2003,8 +2001,6 @@ packages:
   - libzlib >=1.3.1,<2.0a0
   constrains:
   - icu <0.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   size: 689993
@@ -2073,8 +2069,6 @@ packages:
   - zstd >=1.5.6,<1.6.0a0
   constrains:
   - llvm ==19.1.7
-  arch: x86_64
-  platform: linux
   license: Apache-2.0 WITH LLVM-exception
   license_family: APACHE
   size: 5443801
@@ -2293,8 +2287,8 @@ packages:
   license_family: LGPL
   size: 99421089
   timestamp: 1726071024776
-- conda: https://repo.prefix.dev/adapy-tools/win-64/occt-7.8.1-static_h49e36cd_3.conda
-  sha256: 136dc86d97bd21fdfb3cac02b44e92b790951ff217680f8d901ddc87f6aed407
+- conda: https://repo.prefix.dev/adapy-tools/win-64/occt-7.8.1-static_novtk_h49e36cd_3.conda
+  sha256: f73ca878834526d4274cb2dfbb18eee333b3cd73f05c424720922d8dff0af71a
   depends:
   - freetype
   - freeimage
@@ -2306,13 +2300,13 @@ packages:
   - vc >=14.3,<15
   - vc14_runtime >=14.42.34433
   - ucrt >=10.0.20348.0
-  - fontconfig >=2.15.0,<3.0a0
-  - fonts-conda-ecosystem
   - freeimage >=3.18.0,<3.19.0a0
   - freetype >=2.12.1,<3.0a0
+  - fontconfig >=2.15.0,<3.0a0
+  - fonts-conda-ecosystem
   license: LGPL-2.1-only
-  size: 143008147
-  timestamp: 1736868492615
+  size: 143015631
+  timestamp: 1737136967061
 - conda: https://conda.anaconda.org/conda-forge/linux-64/openexr-3.3.2-h6326327_1.conda
   sha256: c4fe8f44c5c7c7cb872a518c9e279dc351047c479bda498bfd229ac58e6aff65
   md5: 3d2b6258db35c422c95ad89b72bf0aae
