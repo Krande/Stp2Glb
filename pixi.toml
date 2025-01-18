@@ -56,8 +56,7 @@ nlohmann_json = "*"
 [feature.static.target.linux-64.dependencies]
 c-compiler = "*"
 cxx-compiler = "*"
-freetype = "*"
-freeimage = "*"
+lld="*"
 occt = { version = "==7.8.1", build = "*static_novtk*", channel = "https://repo.prefix.dev/adapy-tools" }
 
 [feature.static.target.win-64.dependencies]

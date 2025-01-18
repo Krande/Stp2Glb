@@ -41,19 +41,20 @@ if (BUILD_STATIC)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MT")
         set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
         set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
+
+        # Force dependencies to link statically
+        set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE) # Prefer CMake config files
+        foreach (lib ${ADA_CPP_LINK_LIBS})
+            if (TARGET ${lib})
+                set_target_properties(${lib} PROPERTIES
+                        BUILD_WITH_INSTALL_RPATH TRUE
+                        LINK_SEARCH_START_STATIC TRUE
+                        LINK_SEARCH_END_STATIC TRUE
+                )
+            endif ()
+        endforeach ()
     endif ()
 
-    # Force dependencies to link statically
-    set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE) # Prefer CMake config files
-    foreach (lib ${ADA_CPP_LINK_LIBS})
-        if (TARGET ${lib})
-            set_target_properties(${lib} PROPERTIES
-                    BUILD_WITH_INSTALL_RPATH TRUE
-                    LINK_SEARCH_START_STATIC TRUE
-                    LINK_SEARCH_END_STATIC TRUE
-            )
-        endif ()
-    endforeach ()
 else ()
     include(cmake/deps_ifc.cmake)
     include(cmake/deps_stepcode.cmake)
@@ -99,8 +100,10 @@ set(HEADERS
 
 add_executable(STP2GLB ${SOURCES} ${HEADERS})
 
-set_target_properties(STP2GLB PROPERTIES
-        INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/bin")
+if (NOT BUILD_STATIC)
+    set_target_properties(STP2GLB PROPERTIES
+            INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/bin")
+endif ()
 
 if (BUILD_STATIC)
     message(STATUS "CLI11_DIR: ${CLI11_DIR}")
@@ -108,7 +111,6 @@ if (BUILD_STATIC)
 
     if (UNIX)
         message(STATUS "Setting static compilation rules for unix")
-        add_link_options("-fuse-ld=lld")
         target_link_libraries(STP2GLB PRIVATE ${ADA_CPP_LINK_LIBS} pthread -static)
     else ()
         target_link_libraries(STP2GLB ${ADA_CPP_LINK_LIBS} -static)
