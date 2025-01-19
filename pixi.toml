@@ -65,7 +65,7 @@ occt = { version = "==7.8.1", build = "*static_novtk*", channel = "https://repo.
 vs2022_win-64 = "*"
 vswhere = "*"
 freeimage = "*"
-occt = { version = "==7.8.1", build = "*static*novtk*", channel = "https://repo.prefix.dev/adapy-tools" }
+occt = { version = "==7.8.1", build = "*static_novtk*", channel = "https://repo.prefix.dev/adapy-tools" }
 
 [feature.static-mingw.target.win-64.dependencies]
 cmake = "==3.30.5"
