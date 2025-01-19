@@ -1,0 +1,75 @@
+name: ci-build-and-release
+
+# bump 1
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/**'
+      - 'cmake/**'
+      - '.github/workflows/ci-build-and-release.yml'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.builds.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        builds: [
+          { name: win, os: windows-latest, exe_path: build/win-static/STP2GLB.exe },
+          { name: linux, os: ubuntu-latest, exe_path: build/linux-static/STP2GLB }
+        ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '1'
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.39.2
+          cache: true
+
+      - name: Build
+        run: |
+          pixi run -e static build && pixi run -e static install
+
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: STP2GLB-${{ matrix.builds.name }}
+          path: ${{ matrix.builds.exe_path }}
+
+  create-release:
+      runs-on: ubuntu-latest
+      needs: [build]
+      steps:
+        - name: Get current date
+          id: date
+          run: echo "release_date=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
+        - name: Download Windows binary
+          uses: actions/download-artifact@v3
+          with:
+            name: STP2GLB-win
+            path: artifacts/windows
+
+        - name: Download Linux binary
+          uses: actions/download-artifact@v3
+          with:
+            name: STP2GLB-linux
+            path: artifacts/linux
+
+        - name: Create GitHub release
+          uses: softprops/action-gh-release@v2
+          with:
+            files: |
+              artifacts/windows/STP2GLB.exe
+              artifacts/linux/STP2GLB
+            tag_name: ${{ env.release_date }}
+            release_name: Release ${{ env.release_date }}
+            body: |
+              This release includes the following binaries:
+              - Windows: `STP2GLB.exe`
+              - Linux: `STP2GLB`
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
