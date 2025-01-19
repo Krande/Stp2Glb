@@ -1,8 +1,6 @@
 @echo OFF
 
 echo "Building OpenCASCADE Technology"
-REM Extract tar.gz using 7zip
-
 set FNAME=occt-%PKG_VERSION%.tar.gz
 
 REM Extract the .tar.gz file to the current directory
