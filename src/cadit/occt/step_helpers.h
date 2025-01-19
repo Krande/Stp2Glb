@@ -12,10 +12,9 @@
 #include <XCAFDoc_ShapeTool.hxx>
 #include <StepShape_SolidModel.hxx>
 #include <StepShape_Face.hxx>
-#include <iostream>
 #include <string>
 #include <TopoDS_Shape.hxx> // Include the necessary OpenCascade header for TopoDS_Shape
-
+#include "custom_progress.h"
 
 std::string getStepProductName(const Handle(Standard_Transient) &entity, Interface_Graph &theGraph);
 
@@ -66,6 +65,6 @@ Interface_EntityIterator Get_Associated_SolidModel_BiDirectional(
 gp_Trsf get_product_transform(TopoDS_Shape& shape, const Handle(StepBasic_Product)& product);
 
 bool perform_tessellation_with_timeout(const TopoDS_Shape &shape, const IMeshTools_Parameters &meshParams,
-                                       const int timeoutSeconds);
+                                       const int timeoutSeconds, const Handle(CustomProgressIndicator) &progress);
 
 #endif //STEP_HELPERS_H

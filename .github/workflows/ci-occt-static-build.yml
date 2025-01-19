@@ -4,9 +4,9 @@ name: ci-occt-static-build
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'recipes/occt-static/**'
-      - '.github/workflows/ci-occt-static-build.yml'
+#    paths:
+#      - 'recipes/occt-static/**'
+#      - '.github/workflows/ci-occt-static-build.yml'
 
 permissions:
   contents: read

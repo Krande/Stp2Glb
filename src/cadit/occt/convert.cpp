@@ -76,7 +76,7 @@ void convert_stp_to_glb(const GlobalConfig& config)
     {
         TopoDS_Shape shape = XCAFDoc_ShapeTool::GetShape(labelSeq.Value(i));
         std::cout << "Tessellating shape " << i << " of " << labelSeq.Length() << std::endl;
-        perform_tessellation_with_timeout(shape, meshParams, config.tessellation_timout);
+        perform_tessellation_with_timeout(shape, meshParams, config.tessellation_timout, progress_indicator);
     }
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration<double>(stop - start).count();

@@ -697,9 +697,8 @@ Interface_EntityIterator Get_Associated_SolidModel_BiDirectional(
 
 // Function to perform tessellation with a timeout
 bool perform_tessellation_with_timeout(const TopoDS_Shape &shape, const IMeshTools_Parameters &meshParams,
-                                       const int timeoutSeconds) {
-    // Create a custom progress indicator
-    const Handle(CustomProgressIndicator) progress = new CustomProgressIndicator();
+                                       const int timeoutSeconds, const Handle(CustomProgressIndicator) &progress) {
+
 
     // Create a progress range with a default name and range
     const Message_ProgressRange progressRange = progress->Start();

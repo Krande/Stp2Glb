@@ -2,46 +2,66 @@
   "version": 6,
   "configurePresets": [
     {
-      "name": "win-local",
+      "name": "win-shared",
       "generator": "Ninja",
-      "hidden": false,
-      "environment": {
-        "PREFIX": "${sourceDir}/.pixi/envs/default",
-        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/default/Library"
-      },
-      "binaryDir": "${sourceDir}/build/${presetName}",
+      "hidden": true,
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
+        "CLI11_DIR": "$env{LIBRARY_PREFIX}/include",
         "CMAKE_PREFIX_PATH": "$env{LIBRARY_PREFIX};$env{LIBRARY_PREFIX}/include;$env{LIBRARY_PREFIX}/lib;$env{LIBRARY_PREFIX}/bin",
         "CMAKE_INSTALL_PREFIX": "$env{LIBRARY_PREFIX}",
         "OpenCASCADE_DIR": "$env{LIBRARY_PREFIX}/lib/cmake/opencascade",
         "OpenCASCADE_INCLUDE_DIR": "$env{LIBRARY_PREFIX}/include/opencascade",
-        "BUILD_TESTING": "ON",
         "CONDA_LOCAL_DEV": "ON"
       }
     },
     {
-      "name": "win-local-release",
-      "inherits": "win-local",
+      "name": "linux-shared",
+      "generator": "Ninja",
+      "hidden": true,
+      "cacheVariables": {
+        "CLI11_DIR": "$env{PREFIX}/include",
+        "CMAKE_PREFIX_PATH": "$env{PREFIX}:$env{PREFIX}/include:$env{PREFIX}/lib:$env{PREFIX}/bin",
+        "CMAKE_INSTALL_PREFIX": "$env{PREFIX}",
+        "OpenCASCADE_DIR": "$env{PREFIX}/lib/cmake/opencascade",
+        "OpenCASCADE_INCLUDE_DIR": "$env{PREFIX}/include/opencascade"
+      }
+    },
+    {
+      "name": "win-dynamic-debug",
+      "inherits": "win-shared",
+      "hidden": false,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "environment": {
+        "PREFIX": "${sourceDir}/.pixi/envs/dynamic",
+        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/dynamic/Library"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "win-dynamic-release",
+      "hidden": false,
+      "inherits": "win-shared",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "ON",
-        "STEPCODE_INCLUDE_DIR": "$env{LIBRARY_PREFIX}/include/stepcode",
         "CGAL_DIR": "$env{LIBRARY_PREFIX}/lib/cmake/CGAL"
       }
     },
     {
-      "name": "win-local-static",
-      "inherits": "win-local",
+      "name": "win-static",
+      "inherits": "win-shared",
+      "hidden": false,
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "environment": {
         "PREFIX": "${sourceDir}/.pixi/envs/static",
         "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/static/Library"
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CLI11_DIR": "$env{LIBRARY_PREFIX}/include",
-        "CMAKE_PREFIX_PATH": "$env{LIBRARY_PREFIX};$env{LIBRARY_PREFIX}/include;$env{LIBRARY_PREFIX}/lib;$env{LIBRARY_PREFIX}/bin",
-        "CMAKE_INSTALL_PREFIX": "$env{LIBRARY_PREFIX}",
         "BUILD_TESTING": "OFF",
         "BUILD_STATIC": "ON",
         "BUILD_SHARED_LIBS": "OFF",
@@ -49,8 +69,9 @@
       }
     },
     {
-      "name": "win-local-static-mingw",
-      "inherits": "win-local",
+      "name": "win-static-mingw",
+      "inherits": "win-shared",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "environment": {
         "PREFIX": "${sourceDir}/.pixi/envs/static-mingw",
         "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/static-mingw/Library",
@@ -58,9 +79,6 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CLI11_DIR": "$env{LIBRARY_PREFIX}/include",
-        "CMAKE_PREFIX_PATH": "$env{LIBRARY_PREFIX}:$env{LIBRARY_PREFIX}/include:$env{LIBRARY_PREFIX}/lib:$env{LIBRARY_PREFIX}/bin",
-        "CMAKE_INSTALL_PREFIX": "$env{LIBRARY_PREFIX}",
         "BUILD_TESTING": "OFF",
         "BUILD_STATIC": "ON",
         "BUILD_SHARED_LIBS": "OFF",
@@ -68,18 +86,13 @@
       }
     },
     {
-      "name": "linux-local-static",
-      "inherits": "win-local",
+      "name": "linux-static",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "environment": {
         "PREFIX": "${sourceDir}/.pixi/envs/static"
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CLI11_DIR": "$env{PREFIX}/include",
-        "CMAKE_PREFIX_PATH": "$env{PREFIX}:$env{PREFIX}/include:$env{PREFIX}/lib:$env{PREFIX}/bin",
-        "CMAKE_INSTALL_PREFIX": "$env{PREFIX}",
-        "OpenCASCADE_DIR": "$env{PREFIX}/lib/cmake/opencascade",
-        "OpenCASCADE_INCLUDE_DIR": "$env{PREFIX}/include/opencascade",
         "CMAKE_EXE_LINKER_FLAGS": "-std=c++11 -fuse-ld=lld -lpthread -ldl -lm",
         "BUILD_TESTING": "OFF",
         "BUILD_STATIC": "ON",
@@ -87,20 +100,15 @@
       }
     },
     {
-      "name": "linux-local",
-      "inherits": "win-local",
+      "name": "linux-dynamic",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "inherits": "linux-shared",
       "environment": {
-        "PREFIX": "${sourceDir}/.pixi/envs/default"
+        "PREFIX": "${sourceDir}/.pixi/envs/dynamic"
       },
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CLI11_DIR": "$env{PREFIX}/include",
-        "CMAKE_PREFIX_PATH": "$env{PREFIX}:$env{PREFIX}/include:$env{PREFIX}/lib:$env{PREFIX}/bin",
-        "CMAKE_INSTALL_PREFIX": "$env{PREFIX}",
-        "OpenCASCADE_DIR": "$env{PREFIX}/lib/cmake/opencascade",
-        "OpenCASCADE_INCLUDE_DIR": "$env{PREFIX}/include/opencascade",
-        "CMAKE_EXE_LINKER_FLAGS": "-std=c++11 -fuse-ld=lld -lpthread -ldl -lm",
-        "BUILD_TESTING": "OFF",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_TESTING": "ON",
         "BUILD_STATIC": "OFF",
         "CONDA_LOCAL_DEV": "ON"
       }

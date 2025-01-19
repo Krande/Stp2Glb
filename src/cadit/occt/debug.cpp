@@ -134,6 +134,9 @@ void debug_stp_to_glb(const GlobalConfig &config) {
     auto curr_shape = 0;
     auto curr_product = 0;
 
+    // Create a custom progress indicator in a separate thread
+    const Handle(CustomProgressIndicator) progress = new CustomProgressIndicator();
+
     // Iterate over all nodes with geometry indices
     for (const auto &node: GeometryRange(roots)) {
         Handle(StepBasic_Product) product = Handle(StepBasic_Product)::DownCast(model->Entity(node.entityIndex));
@@ -182,7 +185,7 @@ void debug_stp_to_glb(const GlobalConfig &config) {
             // Updated code block
             {
                 TIME_BLOCK("Applying tessellation");
-                if (!perform_tessellation_with_timeout(shape, meshParams, config.tessellation_timout)) {
+                if (!perform_tessellation_with_timeout(shape, meshParams, config.tessellation_timout, progress)) {
                     std::cout << "Tessellation timed out.\n";
                     node.processResult.added_to_model = false;
                     node.processResult.geometryIndex = geometryIndex;
