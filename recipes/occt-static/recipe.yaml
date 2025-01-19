@@ -16,7 +16,7 @@ source:
 
 build:
   number: ${{ build }}
-  string: static_novtk_h${{ hash }}_${{ build }}
+  string: static_novtk_nofreeimage_h${{ hash }}_${{ build }}
 
 requirements:
   build:
