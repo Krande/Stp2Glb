@@ -16,7 +16,7 @@ source:
 
 build:
   number: ${{ build }}
-  string: static_novtk_nofreeimage_h${{ hash }}_${{ build }}
+  string: static_novtk_h${{ hash }}_${{ build }}
 
 requirements:
   build:
@@ -34,6 +34,7 @@ requirements:
         - ${{ cdt('libxext-devel') }}
   host:
     - freetype
+    - freeimage
     - fontconfig
     - if: linux
       then:
@@ -43,6 +44,7 @@ requirements:
     - rapidjson
   run:
     - freetype
+    - freeimage
     - fontconfig
     - if: linux
       then: xorg-libxt

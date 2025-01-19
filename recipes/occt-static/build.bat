@@ -22,7 +22,7 @@ cmake -S . -B build  -G Ninja ^
       -D CMAKE_BUILD_TYPE="Release" ^
       -D USE_TBB:BOOL=OFF ^
       -D USE_VTK:BOOL=OFF ^
-      -D USE_FREEIMAGE:BOOL=OFF ^
+      -D USE_FREEIMAGE:BOOL=ON ^
       -D USE_RAPIDJSON:BOOL=ON ^
       -D BUILD_LIBRARY_TYPE="Static" ^
       -D BUILD_RELEASE_DISABLE_EXCEPTIONS:BOOL=OFF ^
