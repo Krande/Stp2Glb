@@ -4,9 +4,9 @@ name: ci-occt-static-build
 on:
   workflow_dispatch:
   push:
-#    paths:
-#      - 'recipes/occt-static/**'
-#      - '.github/workflows/ci-occt-static-build.yml'
+    paths:
+      - 'recipes/occt-static/**'
+      - '.github/workflows/ci-occt-static-build.yml'
 
 permissions:
   contents: read
@@ -40,7 +40,7 @@ jobs:
           shopt -s nullglob
           EXIT_CODE=0
           for pkg in $(find output -type f \( -name "*.conda" -o -name "*.tar.bz2" \) ); do
-            if ! rattler-build upload prefix -c stp2glb-deps "${pkg}"; then
+            if ! rattler-build upload prefix -c adapy-tools "${pkg}"; then
               EXIT_CODE=1
             fi
           done
