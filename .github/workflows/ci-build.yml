@@ -6,6 +6,7 @@ on:
   push:
     paths:
       - 'src/**'
+      - 'cmake/**'
 
 jobs:
   build:

@@ -23,12 +23,12 @@ ninja = "*"
 nlohmann_json = "*"
 tbb-devel = "*"
 cgal-cpp = "==5.6.1"
-ifcopenshell = "*"
 pytest = "==7.3.1"
 python = "3.12.*"
 
 [target.linux-64.dependencies]
 occt = { version = "==7.8.1", build="*novtk*" }
+ifcopenshell = "*"
 
 [target.win-64.dependencies]
 vs2022_win-64 = "*"

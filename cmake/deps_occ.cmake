@@ -7,7 +7,7 @@ if (OpenCASCADE_FOUND)
     message(STATUS "OpenCASCADE library directory: " ${OpenCASCADE_LIBRARY_DIR})
 
     include_directories(${OpenCASCADE_INCLUDE_DIR})
-    #link_directories(${OpenCASCADE_LIBRARY_DIR})
+    link_directories(${OpenCASCADE_LIBRARY_DIR})
     # Order of linking is important
     # https://dev.opencascade.org/node/71506#comment-847
     list(APPEND
