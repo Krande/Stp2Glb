@@ -91,8 +91,8 @@ build = { cmd=["cmake","-G","Ninja", "--preset", "win-local-static-mingw", "--fr
 install = { cmd = ["ninja", "-C", "build/win-local-static-mingw", "install"], description = "Install the project" }
 
 [feature.conda.target.win-64.tasks]
-build = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml", "-m","recipes/occt-static/conda_build_config-win.yaml"] }
-upload = { cmd=["rattler-build", "upload", "-c", "adapy-tools"]}
+build-occt = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml", "-m","recipes/occt-static/conda_build_config-win.yaml"] }
+build-stepcode = { cmd=["rattler-build", "build", "-r", "recipes/stepcode-static/recipe.yaml", "-m","recipes/stepcode-static/conda_build_config-win.yaml"] }
 
 [feature.conda.target.linux-64.tasks]
 build-occt = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml", "-m","recipes/occt-static/conda_build_config-linux.yaml"] }
