@@ -13,13 +13,13 @@ add_test(NAME debug_plate COMMAND STP2GLB
 
 add_test(NAME as1 COMMAND STP2GLB
         --stp "${CMAKE_CURRENT_SOURCE_DIR}/files/as1-oc-214.stp"
-        --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/as1-oc-214-limited.glb
+        --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/as1-oc-214-std.glb
         WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/bin"
 )
 
 add_test(NAME debug_as1 COMMAND STP2GLB
         --stp "${CMAKE_CURRENT_SOURCE_DIR}/files/as1-oc-214.stp"
-        --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/as1-oc-214-limited.glb
+        --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/as1-oc-214-debug.glb
         --debug
         --solid-only
         --max-geometry-num=0
