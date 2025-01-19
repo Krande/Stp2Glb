@@ -32,10 +32,8 @@ requirements:
         - ${{ cdt('mesa-libgl-devel') }}
         - ${{ cdt('libxi-devel') }}
         - ${{ cdt('libxext-devel') }}
-#        - lld
   host:
     - freetype
-    - freeimage
     - fontconfig
     - if: linux
       then:
@@ -45,7 +43,6 @@ requirements:
     - rapidjson
   run:
     - freetype
-    - freeimage
     - fontconfig
     - if: linux
       then: xorg-libxt

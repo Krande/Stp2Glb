@@ -4,6 +4,8 @@ name: ci-build-and-release
 on:
   workflow_dispatch:
   push:
+    paths:
+      - 'src/**'
 
 jobs:
   build:

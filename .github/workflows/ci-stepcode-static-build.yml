@@ -4,6 +4,8 @@ name: ci-stepcode-static-build
 on:
   workflow_dispatch:
   push:
+    paths:
+      - 'recipes/stepcode-static/**'
 
 permissions:
   contents: read
