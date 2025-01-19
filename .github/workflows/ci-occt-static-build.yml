@@ -3,6 +3,9 @@ name: ci-occt-static-build
 # bump 1
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'recipes/occt-static/**'
 
 permissions:
   contents: read
