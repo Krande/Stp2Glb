@@ -34,6 +34,9 @@ Options:
 
 The pre-requisites build requirements are conda packages handled by using [pixi](https://pixi.sh).
 
+Note that on windows the MSVC c++ compiler toolchain is used. 
+So a pre-requisite on windows is that you have installed VS or VS build tools from https://visualstudio.microsoft.com/downloads/?q=build+tools
+
 ### Building
 
 To build the STP2GLB executable using shared dependencies, run the following command: 
