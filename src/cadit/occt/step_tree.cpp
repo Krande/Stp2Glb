@@ -576,7 +576,7 @@ static std::unique_ptr<ProductNode> BuildProductNodeWithTransform(
     {
         node->name = "(unnamed product)";
     }
-
+    // todo: This extracts an arbitrary instance index from the graph. This needs to be fixed.
     gp_Trsf localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
     // get the entity id of nauo
     // node->instanceIndex = theGraph.Model()->Number(nauo);
