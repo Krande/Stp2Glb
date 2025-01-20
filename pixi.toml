@@ -1,0 +1,105 @@
+[project]
+name = "stp2glb"
+version = "1.0.0"
+description = "A STEP to GLB converter"
+channels = ["C:/Work/code/Stp2Glb/output", "https://repo.prefix.dev/adapy-tools", "conda-forge"]
+platforms = ["win-64", "linux-64"]
+
+[environments]
+dynamic = { features=["dynamic"], no-default-feature = true }
+static = { features=["static"], no-default-feature = true }
+static-mingw = { features=["static-mingw"], no-default-feature = true }
+conda  = { features=["conda"], no-default-feature = true }
+
+# Dependencies
+
+[feature.conda.dependencies]
+rattler-build="<0.35"
+
+[feature.dynamic.dependencies]
+c-compiler = "*"
+cxx-compiler = "*"
+cmake = "==3.30.5"
+cli11 = "*"
+ninja = "*"
+nlohmann_json = "*"
+tbb-devel = "*"
+
+# Optional dependencies
+tinygltf = "==2.8.19"
+cgal-cpp = "==5.6.1"
+pytest = "==7.3.1"
+python = "3.12.*"
+
+[feature.dynamic.target.linux-64.dependencies]
+occt = { version = "==7.8.1", build="*novtk*" }
+ifcopenshell = "*"
+
+[feature.dynamic.target.win-64.dependencies]
+vs2022_win-64 = "*"
+vswhere = "*"
+occt = { version = "==7.8.1", build = "*novtk*debug*", channel = "https://repo.prefix.dev/adapy-tools" }
+stepcode = { version = "==0.8.2", build = "*debug*" }
+ifcopenshell = { version = "*", build = "*debug*" }
+
+[feature.static.dependencies]
+cmake = "==3.30.5"
+cli11 = "*"
+ninja = "*"
+nlohmann_json = "*"
+
+[feature.static.target.linux-64.dependencies]
+c-compiler = "*"
+cxx-compiler = "*"
+lld="*"
+occt = { version = "==7.8.1", build = "*static_novtk*", channel = "https://repo.prefix.dev/adapy-tools" }
+
+[feature.static.target.win-64.dependencies]
+vs2022_win-64 = "*"
+vswhere = "*"
+freeimage = "*"
+occt = { version = "==7.8.1", build = "*static_novtk*", channel = "https://repo.prefix.dev/adapy-tools" }
+
+[feature.static-mingw.target.win-64.dependencies]
+cmake = "==3.30.5"
+cli11 = "*"
+ninja = "*"
+nlohmann_json = "*"
+m2w64-sysroot_win-64 = "*"
+gcc_win-64 = "13*"
+gxx_win-64 = "13*"
+ld_impl_win-64 = "*"
+#occt = { version = "==7.8.1", build = "*static*", channel = "https://repo.prefix.dev/adapy-tools" }
+
+
+# TASKS
+[feature.dynamic.target.win-64.tasks]
+build = { cmd=["cmake","-G","Ninja", "--preset", "win-dynamic-release", "--fresh"] }
+install = { cmd = ["ninja", "-C", "build/win-dynamic-release", "install"], description = "Install the project" }
+test = { cmd = ["ctest"], cwd="build/win-dynamic-release", description = "Run the tests" }
+
+
+[feature.dynamic.target.linux-64.tasks]
+build = { cmd=["cmake","-G","Ninja", "--preset", "linux-dynamic", "--fresh"] }
+install = { cmd = ["ninja", "-C", "build/linux-dynamic", "install"], description = "Install the project" }
+test = { cmd = ["ctest"], cwd="build/linux-local", description = "Run the tests" }
+
+[feature.static.target.win-64.tasks]
+build = { cmd=["cmake","-G","Ninja", "--preset", "win-static", "--fresh"] }
+install = { cmd = ["ninja", "-C", "build/win-static", "install"], description = "Install the project" }
+
+[feature.static.target.linux-64.tasks]
+build = { cmd=["cmake","-G","Ninja", "--preset", "linux-static", "--fresh"] }
+install = { cmd = ["ninja", "-C", "build/linux-static", "install"], description = "Install the project" }
+
+[feature.static-mingw.tasks]
+build = { cmd=["cmake","-G","Ninja", "--preset", "win-static-mingw", "--fresh"] }
+install = { cmd = ["ninja", "-C", "build/win-static-mingw", "install"], description = "Install the project" }
+
+[feature.conda.target.win-64.tasks]
+build-occt = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml", "-m","recipes/occt-static/conda_build_config-win.yaml"] }
+build-stepcode = { cmd=["rattler-build", "build", "-r", "recipes/stepcode-static/recipe.yaml", "-m","recipes/stepcode-static/conda_build_config-win.yaml"] }
+
+[feature.conda.target.linux-64.tasks]
+build-occt = { cmd=["rattler-build", "build", "-r", "recipes/occt-static/recipe.yaml", "-m","recipes/occt-static/conda_build_config-linux.yaml"] }
+build-stepcode = { cmd=["rattler-build", "build", "-r", "recipes/stepcode-static/recipe.yaml", "-m","recipes/stepcode-static/conda_build_config-linux.yaml"] }

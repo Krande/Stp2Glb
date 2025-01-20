@@ -1,34 +1,56 @@
 # Stp2Glb
 
-## Installation
-
-First install the pre-requisites for occt and build requirements from conda-forge.
+## Usage
 
 ```bash
-mamba env update -f environment.build.yml --prune
+STEP to GLB converter
+Usage: STP2GLB.exe [OPTIONS]
+
+Options:
+  -h,--help                   Print this help message and exit
+  --stp REQUIRED              STEP filepath
+  --glb REQUIRED              GLB filepath
+  --lin-defl :FLOAT in [0 - 1] [0.1]
+                              Linear deflection
+  --ang-defl :FLOAT in [0 - 1] [0.5]
+                              Angular deflection
+  --rel-defl                  Relative deflection
+  --debug                     Debug mode. More robust but slower
+  --solid-only                Solid only
+  --max-geometry-num [0]      Maximum number of geometries to convert
+  --filter-names-include      Include Filter name. Command separated list
+  --filter-names-file-include Include Filter name file
+  --filter-names-exclude      Exclude Filter name. Command separated list
+  --filter-names-file-exclude Exclude Filter name file
+  --tessellation-timeout [30]
+                              Tessellation timeout
 ```
+
+
+ 
+## Development
+
+### Install Pre-requisites
+
+The pre-requisites build requirements are conda packages handled by using [pixi](https://pixi.sh).
+
+### Building
+
+To build the STP2GLB executable using shared dependencies, run the following command: 
+```bash
+pixi run build && pixi run install
+```
+
+To build the STP2GLB executable using static dependencies, run the following command:
+```bash
+pixi run -e static build && pixi run -e static install
+```
+
 
 ### Local IDE development
 
-You can use the presets in the CMakePresets.json file. 
-But first you must create a `.env.json` file (which will be ignored by git) where you point to 
-the conda env `environment.build.yml`. The .env.json file should look like this,
-where you fill in the path to your conda env as the "PREFIX" value.
-
-```json
-{
-  "version": 6,
-  "configurePresets": [
-    {
-      "name": "env-vars",
-      "hidden": true,
-      "environment": {
-        "PREFIX": "C:/miniforge3/envs/stp2glb"
-      }
-    }
-  ]
-}
-```
+You can use the presets in the CMakePresets.json file (which points to the pixi environment). Just make sure you've
+either installed the pixi environment using `pixi install` or have run any of the build commands above.
 
 
 ## Performance metrics

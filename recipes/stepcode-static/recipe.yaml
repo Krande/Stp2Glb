@@ -1,0 +1,48 @@
+schema_version: 1
+
+context:
+  name: stepcode
+  version: 0.8.2
+  build: 0
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  url: https://github.com/stepcode/stepcode/archive/refs/tags/v${{ version }}.tar.gz
+  sha256: a0307185313a55e127db4476bf234b9ea90edfeee6ac7a57923f7608a48d91e5
+
+build:
+  number: ${{ build }}
+  string: static_h${{ PKG_HASH }}_${{ build }}
+
+requirements:
+  build:
+    - ${{ compiler('cxx') }}
+    - ${{ stdlib("c") }}
+    - if: unix
+      then: lld
+    - cmake
+    - ninja
+  run_exports:
+    - ${{ pin_subpackage(name, upper_bound='x.x.x') }}
+
+about:
+  license: 0BSD
+  license_file: COPYING
+  summary: Data Exchange with ISO 10303 (STEP) standards
+  description: |
+    STEPcode (formerly NIST's STEP Class Library) is used with IFC, STEP,
+    and other standards that utilize the technologies of ISO10303 (STEP).
+    It generates C++ and Python from EXPRESS (10303-11) schemas. The code is
+    capable of reading and writing STEP Part 21 exchange files.
+    It also utilizes Parts 22 and 23 (SDAI and its C++ binding).
+  homepage: https://stepcode.github.io/
+  repository: https://github.com/stepcode/stepcode
+  documentation: https://stepcode.github.io/docs/home/
+
+extra:
+  recipe-maintainers:
+    - Krande
+

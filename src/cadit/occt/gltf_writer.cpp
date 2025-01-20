@@ -17,7 +17,7 @@
 #include <XCAFDoc_DocumentTool.hxx>
 #include <XCAFDoc_ShapeTool.hxx>
 #include "../../geom/OccShape.h"
-#include "../../helpers/helpers.h"
+#include "helpers.h"
 
 
 
@@ -26,7 +26,7 @@ enum class Units {
     MM,
 };
 
-void to_gltf(
+void to_gltf_from_shapes(
     const std::filesystem::path& gltf_file,
     const std::vector<OccShape>& occ_shape_iterable,
     Units export_units = Units::M,
@@ -72,3 +72,23 @@ void to_gltf(
     glb_writer.Perform(doc, a_file_info, pr);
 }
 
+
+void to_glb_from_doc(const std::filesystem::path& glb_file, const Handle(TDocStd_Document)& doc) {
+    RWGltf_CafWriter writer(glb_file.c_str(), true); // true for binary format
+
+    // Additional file information (can be empty if not needed)
+    const TColStd_IndexedDataMapOfStringString file_info;
+
+    // Progress indicator (can be null if progress tracking is not needed)
+    const Message_ProgressRange progress;
+
+    // if output parent directory is != "" and does not exist, create it
+    if (const std::filesystem::path glb_dir = glb_file.parent_path(); !glb_dir.empty() && !exists(glb_dir))
+    {
+        create_directories(glb_dir);
+    }
+    if (!writer.Perform(doc, file_info, progress))
+    {
+        throw std::runtime_error("Error writing GLB file");
+    }
+}

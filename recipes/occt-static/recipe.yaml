@@ -1,0 +1,82 @@
+schema_version: 1
+
+context:
+  name: occt
+  version: 7.8.1
+  build: 3
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  url: http://git.dev.opencascade.org/gitweb/?p=occt.git;a=snapshot;h=V${{ version | replace(".", "_") }};sf=tgz
+  sha256: 006319a932cb8d76f32455bf4524eca2100657cb0cc65526754fd8da83b3924f
+  file_name: ${{ name }}-${{ version }}.tar.gz
+
+build:
+  number: ${{ build }}
+  string: static_novtk_h${{ hash }}_${{ build }}
+
+requirements:
+  build:
+    - ${{ compiler('cxx') }}
+    - ${{ stdlib("c") }}
+    - cmake
+    - ninja
+    - if: win
+      then:
+        - 7zip
+    - if: linux
+      then:
+        - ${{ cdt('mesa-libgl-devel') }}
+        - ${{ cdt('libxi-devel') }}
+        - ${{ cdt('libxext-devel') }}
+  host:
+    - freetype
+    - freeimage
+    - fontconfig
+    - if: linux
+      then:
+        - xorg-libx11
+        - xorg-xproto
+        - pthread-stubs
+    - rapidjson
+  run:
+    - freetype
+    - freeimage
+    - fontconfig
+    - if: linux
+      then: xorg-libxt
+    - rapidjson
+  run_exports:
+    - ${{ pin_subpackage('occt', upper_bound='x.x.x') }}
+
+tests:
+  - files:
+      recipe:
+        - CMakeLists.txt
+    requirements:
+      run:
+        - ninja
+        - cmake
+    script:
+      - "cmake -G \"Ninja\" ."
+
+about:
+  license: LGPL-2.1-only
+  license_file: LICENSE_LGPL_21.txt
+  summary: this is the occ (opencascade) CAD-Kernel
+  description: |
+    Open Cascade Technology (OCCT), formerly called CAS.CADE
+    is an open source software development platform for 3D CAD,
+    CAM, CAE, etc. that is developed and supported by Open Cascade SAS.
+  homepage: https://www.opencascade.com/
+  repository: http://git.dev.opencascade.org/gitweb/?p=occt.git
+  documentation: https://www.opencascade.com/content/documentation
+
+extra:
+  recipe-maintainers:
+    - adrianinsaval
+    - looooo
+

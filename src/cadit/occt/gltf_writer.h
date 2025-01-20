@@ -5,10 +5,11 @@
 #ifndef NANO_OCCT_GLTF_WRITER_H
 #define NANO_OCCT_GLTF_WRITER_H
 
+#include <filesystem>
+#include <Standard_Handle.hxx>
+#include <TDocStd_Document.hxx>
 
-class gltf_writer {
-
-};
+void to_glb_from_doc(const std::filesystem::path& glb_file, const Handle(TDocStd_Document)& doc);
 
 
 #endif //NANO_OCCT_GLTF_WRITER_H

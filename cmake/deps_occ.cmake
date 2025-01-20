@@ -8,17 +8,10 @@ if (OpenCASCADE_FOUND)
 
     include_directories(${OpenCASCADE_INCLUDE_DIR})
     link_directories(${OpenCASCADE_LIBRARY_DIR})
-
+    # Order of linking is important
+    # https://dev.opencascade.org/node/71506#comment-847
     list(APPEND
             ADA_CPP_LINK_LIBS
-            TKernel
-            TKMath
-            TKBRep
-            TKPrim
-            TKTopAlgo
-            TKDESTEP
-            TKDEGLTF
-            TKLCAF
-            TKXCAF
-            TKRWMesh)
+            ${OpenCASCADE_LIBRARIES}
+    )
 endif (OpenCASCADE_FOUND)
