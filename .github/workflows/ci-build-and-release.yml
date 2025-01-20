@@ -65,6 +65,7 @@ jobs:
           shell: python
           run: |
             import toml
+            import os
             
             with open('pixi.toml') as f:
               data = toml.load(f)
