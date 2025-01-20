@@ -3,11 +3,11 @@ name: ci-build-and-release
 # bump 1
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'src/**'
-      - 'cmake/**'
-      - '.github/workflows/ci-build-and-release.yml'
+#  push:
+#    paths:
+#      - 'src/**'
+#      - 'cmake/**'
+#      - '.github/workflows/ci-build-and-release.yml'
 
 permissions:
   contents: write

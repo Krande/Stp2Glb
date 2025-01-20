@@ -3,10 +3,10 @@ name: ci-stepcode-static-build
 # bump 1
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'recipes/stepcode-static/**'
-      - '.github/workflows/ci-stepcode-static-build.yml'
+#  push:
+#    paths:
+#      - 'recipes/stepcode-static/**'
+#      - '.github/workflows/ci-stepcode-static-build.yml'
 
 permissions:
   contents: read
