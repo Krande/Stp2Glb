@@ -9,6 +9,10 @@ on:
       - 'cmake/**'
       - '.github/workflows/ci-build-and-release.yml'
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   build:
     runs-on: ${{ matrix.builds.os }}
@@ -47,6 +51,26 @@ jobs:
           id: date
           run: echo "release_date=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
+        - uses: actions/setup-python@v5
+          with:
+            python-version: '3.13'
+            cache: 'pip' # caching pip dependencies
+        - run: pip install toml
+
+        - name: Read toml using python
+          shell: python
+          run: |
+            import toml
+            
+            with open('pixi.toml') as f:
+              data = toml.load(f)
+            
+            version = data['project']['version']
+            print(f"{version=}")
+            
+            with open(os.environ['GITHUB_ENV'], 'a') as fh:
+              print(f"VERSION={version}", file=fh)
+
         - name: Download Windows binary
           uses: actions/download-artifact@v3
           with:
@@ -65,10 +89,10 @@ jobs:
             files: |
               artifacts/windows/STP2GLB.exe
               artifacts/linux/STP2GLB
-            tag_name: ${{ env.release_date }}
-            name: Release ${{ env.release_date }}
+            tag_name: ${{ env.VERSION }}
+            name: Release ${{ env.VERSION }}
             body: |
-              This release includes the following binaries:
+              The ${{ env.VERSION }} release (${{ env.release_date }}) includes the following binaries:
               - Windows: `STP2GLB.exe`
               - Linux: `STP2GLB`
           env:
