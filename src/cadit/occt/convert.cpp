@@ -1,7 +1,3 @@
-//
-// Created by ofskrand on 12.09.2024.
-//
-
 #include "convert.h"
 #include <STEPCAFControl_Reader.hxx>
 #include <XCAFDoc_DocumentTool.hxx>

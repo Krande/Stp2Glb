@@ -6,16 +6,16 @@
 #endif // Unix platform check
 
 #include <filesystem>
+#include "CLI/CLI.hpp"
 #include "config_structs.h"
 #include <chrono>
-#include "CLI/CLI.hpp"
 #include "cadit/occt/debug.h"
 #include "cadit/occt/convert.h"
 #include "cadit/occt/bsplinesurf.h"
 #include "cadit/occt/helpers.h"
 #include "config_utils.h"
 
-void print_status(const GlobalConfig config) {
+void print_status(const GlobalConfig& config) {
     std::cout << "STP2GLB Converter" << "\n";
     std::cout << "STP File: " << config.stpFile << "\n";
     std::cout << "GLB File: " << config.glbFile << "\n\n";
