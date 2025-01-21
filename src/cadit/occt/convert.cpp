@@ -5,11 +5,18 @@
 #include <TDocStd_Document.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <filesystem>
+#include <XSControl_TransferReader.hxx>
+#include <Transfer_TransientProcess.hxx>
 #include <XCAFDoc_ShapeTool.hxx>
 #include <Interface_Graph.hxx>
 #include <Interface_Static.hxx>
+#include <Standard_Type.hxx>
+#include <map>
 #include <StepData_StepModel.hxx>
+#include <XSControl_WorkSession.hxx>
+
 #include "custom_progress.h"
+#include "geometry_iterator.h"
 #include "step_helpers.h"
 #include "step_tree.h"
 #include "../../config_structs.h"
@@ -46,10 +53,10 @@ void convert_stp_to_glb(const GlobalConfig& config)
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration<double>(stop - start).count();
 
-    std::cout << "Read complete in " << std::fixed << std::setprecision(2) << duration << " seconds" << std::endl;
+    std::cout << "Read complete in " << std::fixed << std::setprecision(2) << duration << " seconds" << "\n";
 
     // Transfer to a document
-    std::cout << "Transferring data to document" << std::endl;
+    std::cout << "Transferring data to document" << "\n";
     start = std::chrono::high_resolution_clock::now();
     const Handle(TDocStd_Document) doc = new TDocStd_Document("MDTV-XCAF");
 
@@ -62,13 +69,50 @@ void convert_stp_to_glb(const GlobalConfig& config)
 
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration<double>(stop - start).count();
-    std::cout << "Transfer complete in " << std::fixed << std::setprecision(2) << duration << " seconds" << std::endl;
+    std::cout << "Transfer complete in " << std::fixed << std::setprecision(2) << duration << " seconds" << "\n";
 
+    // Build the graph of references in order to connect shape id with the source STEP entity
     auto default_reader = reader.ChangeReader();
     auto model = default_reader.StepModel();
 
-    // Build the graph of references
     Interface_Graph theGraph(model, /*keepTransient*/ Standard_False);
+    auto roots = ExtractProductHierarchy(model, theGraph);
+    add_geometries_to_nodes(roots, theGraph);
+
+    std::vector<int> step_shape_ids;
+    for (const auto &node: GeometryRange(roots)) {
+        if (node.geometryIndices.empty()) {
+            continue;
+        }
+        // if
+        for (auto i: node.geometryIndices) {
+            if (std::ranges::find(step_shape_ids, i) == step_shape_ids.end()) {
+                step_shape_ids.push_back(i);
+            }
+        }
+    }
+    // Create a map to store the relationship between STEP entity IDs and shapes
+    std::map<int, TopoDS_Shape> stepEntityToShapeMap;
+
+    // Get the transfer process from the reader
+    Handle(Transfer_TransientProcess) transferProcess = default_reader.WS()->TransferReader()->TransientProcess();
+
+    // Iterate over all entities in the STEP model
+    for (int entityIndex = 1; entityIndex <= model->NbEntities(); ++entityIndex) {
+        Handle(Standard_Transient) entity = model->Value(entityIndex);
+
+        // Find the result associated with this entity
+        Handle(Standard_Transient) result = transferProcess->Find(entity);
+
+        // Attempt to cast the result to a TopoDS_Shape
+        if (!result.IsNull()) {
+            const TopoDS_Shape* shape = dynamic_cast<const TopoDS_Shape*>(result.get());
+            if (shape) {
+                // Map the entity ID to the shape
+                stepEntityToShapeMap[entityIndex] = *shape;
+            }
+        }
+    }
 
     // Tessellation
     const Handle(XCAFDoc_ShapeTool) shapeTool = XCAFDoc_DocumentTool::ShapeTool(doc->Main());
@@ -77,7 +121,7 @@ void convert_stp_to_glb(const GlobalConfig& config)
 
     std::vector<ProcessResult> failed_nodes;
 
-    std::cout << "Beginning tessellation of shapes: " << labelSeq.Length() << std::endl;
+    std::cout << "Beginning tessellation of shapes: " << labelSeq.Length() << "\n";
     start = std::chrono::high_resolution_clock::now();
     for (Standard_Integer i = 1; i <= labelSeq.Length(); ++i)
     {
@@ -90,6 +134,7 @@ void convert_stp_to_glb(const GlobalConfig& config)
             auto entity = model->Entity(i);
             auto entityIndex = theGraph.Model()->Number(entity);
             auto result = ProcessResult();
+
             result.added_to_model = false;
             result.geometryIndex = entityIndex;
             result.skip_reason = "Tessellation timed out";
@@ -98,10 +143,10 @@ void convert_stp_to_glb(const GlobalConfig& config)
     }
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration<double>(stop - start).count();
-    std::cout << "Tessellation complete in " << std::fixed << std::setprecision(2) << duration << " seconds" << std::endl;
+    std::cout << "Tessellation complete in " << std::fixed << std::setprecision(2) << duration << " seconds" << "\n";
 
     // Write to GLB
-    std:: cout << "Writing to GLB file: " << config.glbFile << std::endl;
+    std:: cout << "Writing to GLB file: " << config.glbFile << "\n";
     start = std::chrono::high_resolution_clock::now();
     RWGltf_CafWriter writer(config.glbFile.c_str(), true); // true for binary format
 
@@ -123,7 +168,7 @@ void convert_stp_to_glb(const GlobalConfig& config)
     }
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration<double>(stop - start).count();
-    std::cout << "Write complete in " << std::fixed << std::setprecision(2) << duration << " seconds" << std::endl;
+    std::cout << "Write complete in " << std::fixed << std::setprecision(2) << duration << " seconds" << "\n";
 
     // iterate over all nodes that weren't added to the model and save the list to json
     const std::filesystem::path out_json_log_file = config.glbFile.parent_path() / config.glbFile.stem().concat(

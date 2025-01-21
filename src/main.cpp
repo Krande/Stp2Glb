@@ -85,15 +85,21 @@ int main(int argc, char* argv[])
     std::cout << "Starting conversion..." << "\n";
 
     const auto start = std::chrono::high_resolution_clock::now();
-    if (config.buildConfig.build_bspline_surf)
-        make_a_bspline_surf(config);
+    try {
+        if (config.buildConfig.build_bspline_surf)
+            make_a_bspline_surf(config);
 
-    if (config.debug_mode == 1)
-        debug_stp_to_glb(config);
-    else
-    {
-        convert_stp_to_glb(config);
+        if (config.debug_mode == 1)
+            debug_stp_to_glb(config);
+        else
+        {
+            convert_stp_to_glb(config);
+        }
+    } catch (std::exception& ex) {
+        std::cerr << "Error: " << ex.what() << "\n";
+        return 1;
     }
+
     const auto stop = std::chrono::high_resolution_clock::now();
     const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
