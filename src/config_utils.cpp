@@ -51,6 +51,21 @@ std::vector<std::string> process_filter_names(const std::string& input, const st
     return filter_names;
 }
 
+// Helper function to check if a string ends with a specific suffix (case insensitive)
+bool endsWithCaseInsensitive(const std::string& str, const std::string& suffix) {
+    if (str.size() < suffix.size()) {
+        return false;
+    }
+    auto strIt = str.end() - suffix.size();
+    auto suffixIt = suffix.begin();
+    while (suffixIt != suffix.end()) {
+        if (tolower(*strIt++) != tolower(*suffixIt++)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Main processing function
 GlobalConfig process_parameters(CLI::App& app)
 {
@@ -64,10 +79,25 @@ GlobalConfig process_parameters(CLI::App& app)
     const auto filter_names_include = process_filter_names(filter_names_include_input, filter_names_file_include);
     const auto filter_names_exclude = process_filter_names(filter_names_exclude_input, filter_names_file_exclude);
 
+    const std::string stpFilename = app.get_option("--stp")->results()[0];
+    const std::string glbFilename = app.get_option("--glb")->results()[0];
+
+    // Validate extensions
+    const bool isStpValid = endsWithCaseInsensitive(stpFilename, ".stp") || endsWithCaseInsensitive(stpFilename, ".step");
+    const bool isGlbValid = endsWithCaseInsensitive(glbFilename, ".glb");
+
+    if (!isStpValid) {
+        throw std::invalid_argument("Invalid --stp filename. It must end with .stp or .step.");
+    }
+
+    if (!isGlbValid) {
+        throw std::invalid_argument("Invalid --glb filename. It must end with .glb.");
+    }
+
     // Create configuration
     return {
-        .stpFile = app.get_option("--stp")->results()[0],
-        .glbFile = app.get_option("--glb")->results()[0],
+        .stpFile = stpFilename,
+        .glbFile = glbFilename,
         .debug_mode = app.get_option("--debug")->as<bool>(),
         .linearDeflection = app.get_option("--lin-defl")->as<double>(),
         .angularDeflection = app.get_option("--ang-defl")->as<double>(),

@@ -71,34 +71,33 @@ int main(int argc, char* argv[])
     // build->add_option("--b-spline-surf", "Build a B-Spline surface")->default_val(false);
 
     CLI11_PARSE(app, argc, argv);
+    GlobalConfig config;
 
-    const auto config = process_parameters(app);
+    try {
+        config = process_parameters(app);
+    } catch (const std::exception& ex) {
+        std::cerr << "Error: " << ex.what() << "\n";
+        return 1;
+    }
 
     print_status(config);
     std::cout << "\n";
     std::cout << "Starting conversion..." << "\n";
-    try
-    {
-        const auto start = std::chrono::high_resolution_clock::now();
-        if (config.buildConfig.build_bspline_surf)
-            make_a_bspline_surf(config);
 
-        if (config.debug_mode == 1)
-            debug_stp_to_glb(config);
-        else
-        {
-            convert_stp_to_glb(config);
-        }
-        const auto stop = std::chrono::high_resolution_clock::now();
-        const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    const auto start = std::chrono::high_resolution_clock::now();
+    if (config.buildConfig.build_bspline_surf)
+        make_a_bspline_surf(config);
 
-        std::cout << "STP converted in: " << duration.count() << " microseconds" << "\n";
-    }
-    catch (...)
+    if (config.debug_mode == 1)
+        debug_stp_to_glb(config);
+    else
     {
-        std::cout << "Unknown error occurred." << "\n";
-        return 1;
+        convert_stp_to_glb(config);
     }
+    const auto stop = std::chrono::high_resolution_clock::now();
+    const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+
+    std::cout << "STP converted in: " << duration.count() << " microseconds" << "\n";
 
     return 0;
 }
