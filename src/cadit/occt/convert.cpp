@@ -65,60 +65,16 @@ void convert_stp_to_glb(const GlobalConfig& config)
     // Create a progress range with a default name and range
     if (Message_ProgressRange progressRange = progress_indicator->Start(); !reader.Transfer(doc, progressRange))
         throw std::runtime_error("Error transferring data to document");
-    progress_indicator->Reset();
 
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration<double>(stop - start).count();
     std::cout << "Transfer complete in " << std::fixed << std::setprecision(2) << duration << " seconds" << "\n";
 
-    // Build the graph of references in order to connect shape id with the source STEP entity
-    auto default_reader = reader.ChangeReader();
-    auto model = default_reader.StepModel();
-
-    Interface_Graph theGraph(model, /*keepTransient*/ Standard_False);
-    auto roots = ExtractProductHierarchy(model, theGraph);
-    add_geometries_to_nodes(roots, theGraph);
-
-    std::vector<int> step_shape_ids;
-    for (const auto &node: GeometryRange(roots)) {
-        if (node.geometryIndices.empty()) {
-            continue;
-        }
-        // if
-        for (auto i: node.geometryIndices) {
-            if (std::ranges::find(step_shape_ids, i) == step_shape_ids.end()) {
-                step_shape_ids.push_back(i);
-            }
-        }
-    }
-    // Create a map to store the relationship between STEP entity IDs and shapes
-    std::map<int, TopoDS_Shape> stepEntityToShapeMap;
-
-    // Get the transfer process from the reader
-    Handle(Transfer_TransientProcess) transferProcess = default_reader.WS()->TransferReader()->TransientProcess();
-
-    // Iterate over all entities in the STEP model
-    for (int entityIndex = 1; entityIndex <= model->NbEntities(); ++entityIndex) {
-        Handle(Standard_Transient) entity = model->Value(entityIndex);
-
-        // Find the result associated with this entity
-        Handle(Standard_Transient) result = transferProcess->Find(entity);
-
-        // Attempt to cast the result to a TopoDS_Shape
-        if (!result.IsNull()) {
-            const TopoDS_Shape* shape = dynamic_cast<const TopoDS_Shape*>(result.get());
-            if (shape) {
-                // Map the entity ID to the shape
-                stepEntityToShapeMap[entityIndex] = *shape;
-            }
-        }
-    }
-
     // Tessellation
     const Handle(XCAFDoc_ShapeTool) shapeTool = XCAFDoc_DocumentTool::ShapeTool(doc->Main());
+
     TDF_LabelSequence labelSeq;
     shapeTool->GetShapes(labelSeq);
-
     std::vector<ProcessResult> failed_nodes;
 
     std::cout << "Beginning tessellation of shapes: " << labelSeq.Length() << "\n";
@@ -131,12 +87,9 @@ void convert_stp_to_glb(const GlobalConfig& config)
         if (!perform_tessellation_with_timeout(shape, meshParams, config.tessellation_timout, progress_indicator)) {
             std::cout << "Tessellation timed out.\n";
             // get entity from shape
-            auto entity = model->Entity(i);
-            auto entityIndex = theGraph.Model()->Number(entity);
             auto result = ProcessResult();
-
             result.added_to_model = false;
-            result.geometryIndex = entityIndex;
+            result.geometryIndex = i;
             result.skip_reason = "Tessellation timed out";
             failed_nodes.push_back(result);
         }
