@@ -170,7 +170,7 @@ std::vector<std::unique_ptr<ProductNode>> ExtractProductHierarchy(const Handle(I
                                                  const Interface_Graph& theGraph)
 {
     // 1) Build the map of parent->children relationships
-    auto parentToChildren = BuildAssemblyLinks(model, theGraph);
+    const auto parentToChildren = BuildAssemblyLinks(model, theGraph);
 
     // 2) We want to find "root" products (those that never appear as a child)
     std::unordered_set<int> allChildren;
@@ -194,7 +194,7 @@ std::vector<std::unique_ptr<ProductNode>> ExtractProductHierarchy(const Handle(I
     std::vector<std::unique_ptr<ProductNode>> roots;
     for (int idx : allProducts)
     {
-        if (allChildren.find(idx) == allChildren.end())
+        if (!allChildren.contains(idx))
         {
             // This is a root product, start with the identity transformation
             roots.push_back(BuildProductNodeWithTransform(idx, parentToChildren, model, theGraph, gp_Trsf()));
@@ -518,7 +518,7 @@ Handle(StepRepr_NextAssemblyUsageOccurrence) Get_NextAssemblyUsageOccurrence(con
                                                                              const Interface_Graph& theGraph)
 {
     Handle(StepRepr_NextAssemblyUsageOccurrence) nauo;
-    std::vector<Handle(StepRepr_NextAssemblyUsageOccurrence)> nauos;
+    std::vector<Standard_Integer> nauos;
 
     Interface_EntityIterator childIter = theGraph.Sharings(product);
     for (childIter.Start(); childIter.More(); childIter.Next())
@@ -538,7 +538,7 @@ Handle(StepRepr_NextAssemblyUsageOccurrence) Get_NextAssemblyUsageOccurrence(con
                         if (pdIter.Value()->IsKind(STANDARD_TYPE(StepRepr_NextAssemblyUsageOccurrence)))
                         {
                             nauo = Handle(StepRepr_NextAssemblyUsageOccurrence)::DownCast(pdIter.Value());
-                            nauos.push_back(nauo);
+                            nauos.push_back(theGraph.EntityNumber(nauo));
                         }
                     }
                 }
@@ -565,9 +565,6 @@ static std::unique_ptr<ProductNode> BuildProductNodeWithTransform(
     const Handle(Standard_Transient) ent = model->Value(productIndex);
     const auto product = Handle(StepBasic_Product)::DownCast(ent);
 
-    // Compute the transformation for this node
-    auto nauo = Get_NextAssemblyUsageOccurrence(product, theGraph);
-
     if (!product.IsNull() && !product->Name().IsNull())
     {
         node->name = product->Name()->ToCString();
@@ -576,6 +573,10 @@ static std::unique_ptr<ProductNode> BuildProductNodeWithTransform(
     {
         node->name = "(unnamed product)";
     }
+
+    // Compute the transformation for this node
+    auto nauo = Get_NextAssemblyUsageOccurrence(product, theGraph);
+
     // todo: This extracts an arbitrary instance index from the graph. This needs to be fixed.
     gp_Trsf localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
     // get the entity id of nauo

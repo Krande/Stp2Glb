@@ -38,9 +38,6 @@ struct ConvertObject {
 
     // Optional: Destructor
     ~ConvertObject();
-
-    // Optional: Member functions
-    void printDetails() const;
 };
 
 

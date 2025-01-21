@@ -105,8 +105,8 @@ if (NOT BUILD_STATIC)
             INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/bin")
 endif ()
 
+message(STATUS "CLI11_DIR: ${CLI11_DIR}")
 if (BUILD_STATIC)
-    message(STATUS "CLI11_DIR: ${CLI11_DIR}")
     target_include_directories(STP2GLB PRIVATE ${CLI11_DIR})
 
     if (UNIX)
