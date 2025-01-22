@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
     app.add_option("--ang-defl", "Angular deflection")->default_val(0.5)->check(CLI::Range(0.0, 1.0));
     app.add_flag("--rel-defl", "Relative deflection");
 
-    app.add_flag("--debug", "Debug mode. More robust but slower");
+    app.add_flag("--debug", "Debug mode. Slower (and experimental), but provides more information about which STEP entities that failed to convert");
     app.add_flag("--solid-only", "Solid only");
     app.add_option("--max-geometry-num", "Maximum number of geometries to convert")->default_val(0);
     app.add_option("--filter-names-include", "Include Filter name. Command separated list")->default_val("");
