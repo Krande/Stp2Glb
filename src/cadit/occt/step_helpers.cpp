@@ -455,49 +455,6 @@ ConvertObject::~ConvertObject()
     // Clean up resources if necessary
 }
 
-// Member function implementation
-void ConvertObject::printDetails() const
-{
-    std::cout << "Name: " << name << "\n"
-        << "Added to Model: " << (AddedToModel ? "Yes" : "No") << std::endl;
-    // Note: Printing the shape details requires appropriate handling as TopoDS_Shape doesn't have a simple string representation
-}
-
-ConvertObject entity_to_shape(const Handle(Standard_Transient)& entity,
-                              STEPControl_Reader default_reader,
-                              const Handle(XCAFDoc_ShapeTool)& shape_tool,
-                              IMeshTools_Parameters& meshParams,
-                              const bool solid_only)
-{
-    const Handle(Standard_Type) type = entity->DynamicType();
-    bool added_to_model = false;
-    TopoDS_Shape shape;
-    std::string name;
-    TDF_Label shape_label;
-
-    // Check if the entity is a solid model
-    if (entity->IsKind(STANDARD_TYPE(StepShape_SolidModel)))
-    {
-        Handle(StepShape_SolidModel) solid_model = Handle(StepShape_SolidModel)::DownCast(entity);
-        shape = make_shape(solid_model, default_reader);
-        name = get_name(solid_model);
-    }
-
-    // Check if the entity is a face (StepShape_AdvancedFace or StepShape_Face)
-    if (entity->IsKind(STANDARD_TYPE(StepShape_AdvancedFace)) || entity->IsKind(
-        STANDARD_TYPE(StepShape_Face)))
-    {
-        if (!solid_only)
-        {
-            Handle(StepShape_Face) face = Handle(StepShape_Face)::DownCast(entity);
-            shape = make_shape(face, default_reader);
-            name = get_name(face);
-        }
-    }
-
-    return {name, shape, shape_label, added_to_model};
-}
-
 // Custom filter function (example: filter by entity type or name)
 bool CustomFilter(const Handle(Standard_Transient)& entity)
 {

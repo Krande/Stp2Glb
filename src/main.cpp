@@ -6,16 +6,16 @@
 #endif // Unix platform check
 
 #include <filesystem>
+#include "CLI/CLI.hpp"
 #include "config_structs.h"
 #include <chrono>
-#include "CLI/CLI.hpp"
 #include "cadit/occt/debug.h"
 #include "cadit/occt/convert.h"
 #include "cadit/occt/bsplinesurf.h"
 #include "cadit/occt/helpers.h"
 #include "config_utils.h"
 
-void print_status(const GlobalConfig config) {
+void print_status(const GlobalConfig& config) {
     std::cout << "STP2GLB Converter" << "\n";
     std::cout << "STP File: " << config.stpFile << "\n";
     std::cout << "GLB File: " << config.glbFile << "\n\n";
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
     app.add_option("--ang-defl", "Angular deflection")->default_val(0.5)->check(CLI::Range(0.0, 1.0));
     app.add_flag("--rel-defl", "Relative deflection");
 
-    app.add_flag("--debug", "Debug mode. More robust but slower");
+    app.add_flag("--debug", "Debug mode. Slower (and experimental), but provides more information about which STEP entities that failed to convert");
     app.add_flag("--solid-only", "Solid only");
     app.add_option("--max-geometry-num", "Maximum number of geometries to convert")->default_val(0);
     app.add_option("--filter-names-include", "Include Filter name. Command separated list")->default_val("");
@@ -71,15 +71,21 @@ int main(int argc, char* argv[])
     // build->add_option("--b-spline-surf", "Build a B-Spline surface")->default_val(false);
 
     CLI11_PARSE(app, argc, argv);
+    GlobalConfig config;
 
-    const auto config = process_parameters(app);
+    try {
+        config = process_parameters(app);
+    } catch (const std::exception& ex) {
+        std::cerr << "Error: " << ex.what() << "\n";
+        return 1;
+    }
 
     print_status(config);
     std::cout << "\n";
     std::cout << "Starting conversion..." << "\n";
-    try
-    {
-        const auto start = std::chrono::high_resolution_clock::now();
+
+    const auto start = std::chrono::high_resolution_clock::now();
+    try {
         if (config.buildConfig.build_bspline_surf)
             make_a_bspline_surf(config);
 
@@ -89,16 +95,15 @@ int main(int argc, char* argv[])
         {
             convert_stp_to_glb(config);
         }
-        const auto stop = std::chrono::high_resolution_clock::now();
-        const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-
-        std::cout << "STP converted in: " << duration.count() << " microseconds" << "\n";
-    }
-    catch (...)
-    {
-        std::cout << "Unknown error occurred." << "\n";
+    } catch (std::exception& ex) {
+        std::cerr << "Error: " << ex.what() << "\n";
         return 1;
     }
+
+    const auto stop = std::chrono::high_resolution_clock::now();
+    const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    const double seconds = static_cast<double>(duration.count()) / 1e6;
+    std::cout << "STP converted in: " << std::fixed << std::setprecision(2) << seconds << " seconds" << "\n";
 
     return 0;
 }

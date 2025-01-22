@@ -128,7 +128,7 @@ void debug_stp_to_glb(const GlobalConfig &config) {
 
     // first find the number of geometries
     for (const auto &node: GeometryRange(roots)) {
-        num_geometry += node.geometryIndices.size();
+        num_geometry += node.geometryInstances.size();
         num_products++;
     }
     auto curr_shape = 0;
@@ -136,6 +136,7 @@ void debug_stp_to_glb(const GlobalConfig &config) {
 
     // Create a custom progress indicator in a separate thread
     const Handle(CustomProgressIndicator) progress = new CustomProgressIndicator();
+    Handle(XCAFDoc_ColorTool) colorTool = XCAFDoc_DocumentTool::ColorTool(step_store.doc_->Main());
 
     // Iterate over all nodes with geometry indices
     for (const auto &node: GeometryRange(roots)) {
@@ -143,17 +144,17 @@ void debug_stp_to_glb(const GlobalConfig &config) {
 
         std::cout << "Node: " << node.name << " (" << curr_product << "/" << num_products << ")"
                 << ", EntityIndex: " << node.entityIndex
-                << ", Geometry count: " << node.geometryIndices.size() << '\n';
+                << ", Geometry count: " << node.geometryInstances.size() << '\n';
+        for (const GeometryInstance geometry_instance: node.geometryInstances) {
 
-        for (int geometryIndex: node.geometryIndices) {
-            std::cout << "Geometry: " << geometryIndex << " (" << curr_shape << "/" << num_geometry << ")\n";
+            std::cout << "Geometry: " << geometry_instance.entityIndex << " (" << curr_shape << "/" << num_geometry << ")\n";
 
-            auto geometry = model->Entity(geometryIndex);
+            auto geometry = model->Entity(geometry_instance.entityIndex);
 
             if (!should_process_geometry(geometry, node, config)) {
                 std::cout << "Skipping shape: " << node.name << " (Entity: " << node.entityIndex << ")\n";
                 node.processResult.added_to_model = false;
-                node.processResult.geometryIndex = geometryIndex;
+                node.processResult.geometryIndex = geometry_instance.entityIndex;
                 node.processResult.skip_reason = "Skipped by filter";
                 curr_shape++;
                 continue;
@@ -162,22 +163,29 @@ void debug_stp_to_glb(const GlobalConfig &config) {
             if (!default_reader.TransferEntity(geometry)) {
                 std::cerr << "Error transferring entity" << "\n";
                 node.processResult.added_to_model = false;
-                node.processResult.geometryIndex = geometryIndex;
+                node.processResult.geometryIndex = geometry_instance.entityIndex;
                 node.processResult.skip_reason = "Error transferring entity";
                 curr_shape++;
                 continue;
             };
+
             TopoDS_Shape shape = default_reader.Shape(default_reader.NbShapes());
             if (shape.IsNull()) {
                 std::cerr << "Error converting entity to shape" << "\n";
                 node.processResult.added_to_model = false;
-                node.processResult.geometryIndex = geometryIndex;
+                node.processResult.geometryIndex = geometry_instance.entityIndex;
                 node.processResult.skip_reason = "Unable to convert entity to shape";
                 curr_shape++;
                 continue;
             }
-
-            auto color = random_color();
+            Quantity_Color occ_color;
+            const Standard_Boolean hasColor = colorTool->GetColor(shape, XCAFDoc_ColorSurf, occ_color);
+            Color color;
+            if (!hasColor) {
+                color = random_color();
+            } else {
+                color = Color(occ_color.Red(), occ_color.Green(), occ_color.Blue());
+            }
 
             std::cout << "Adding Shape: " << node.name << " (Entity: " << node.entityIndex << ") to STEP Writer\n";
             step_store.add_shape(shape, node.name, color, node);
@@ -188,7 +196,7 @@ void debug_stp_to_glb(const GlobalConfig &config) {
                 if (!perform_tessellation_with_timeout(shape, meshParams, config.tessellation_timout, progress)) {
                     std::cout << "Tessellation timed out.\n";
                     node.processResult.added_to_model = false;
-                    node.processResult.geometryIndex = geometryIndex;
+                    node.processResult.geometryIndex = geometry_instance.entityIndex;
                     node.processResult.skip_reason = "Tessellation timed out";
                     curr_shape++;
                     continue;

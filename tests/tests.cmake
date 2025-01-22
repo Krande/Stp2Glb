@@ -26,6 +26,15 @@ add_test(NAME debug_as1 COMMAND STP2GLB
         WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/bin"
 )
 
+add_test(NAME debug_as1_mini COMMAND STP2GLB
+        --stp "${CMAKE_CURRENT_SOURCE_DIR}/files/as1-oc-214-mini.stp"
+        --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/as1-oc-214-mini-debug.glb
+        --debug
+        --solid-only
+        --max-geometry-num=0
+        WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/bin"
+)
+
 add_test(NAME debug_as1_filter COMMAND STP2GLB
         --stp "${CMAKE_CURRENT_SOURCE_DIR}/files/as1-oc-214.stp"
         --glb ${CMAKE_CURRENT_SOURCE_DIR}/temp/as1-oc-214-filtered.glb

@@ -70,7 +70,7 @@ private:
 
             // 1) If this is the first time we see this node (childIndex == 0)
             //    and it has geometry, we stop here so operator* sees it.
-            if (childIndex == 0 && !currentNode->geometryIndices.empty()) {
+            if (childIndex == 0 && !currentNode->geometryInstances.empty()) {
                 return; 
             }
 
