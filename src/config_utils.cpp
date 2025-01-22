@@ -85,6 +85,16 @@ GlobalConfig process_parameters(CLI::App& app)
     // Validate extensions
     const bool isStpValid = endsWithCaseInsensitive(stpFilename, ".stp") || endsWithCaseInsensitive(stpFilename, ".step");
     const bool isGlbValid = endsWithCaseInsensitive(glbFilename, ".glb");
+    auto stpFilePath = std::filesystem::path(stpFilename);
+    auto glbFilePath = std::filesystem::path(glbFilename);
+
+    // check if file paths exists
+    if (!exists(stpFilePath)) {
+        throw std::invalid_argument("Invalid --stp filename \"" + stpFilename + "\". File does not exist.");
+    }
+    if (exists(glbFilePath)) {
+        std::cout << "Warning: --glb filename \"" << glbFilename << "\" already exists and will be overwritten.\n";
+    }
 
     if (!isStpValid) {
         throw std::invalid_argument("Invalid --stp filename. It must end with .stp or .step.");

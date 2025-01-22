@@ -6,7 +6,9 @@ channels = ["https://repo.prefix.dev/adapy-tools", "conda-forge"]
 platforms = ["win-64", "linux-64"]
 
 [environments]
-dynamic = { features=["dynamic"], no-default-feature = true }
+dynamic-shared = { features=["dynamic-shared"], no-default-feature = true }
+dynamic-debug = { features=["dynamic-debug", "dynamic-shared"], no-default-feature = true }
+dynamic = { features=["dynamic", "dynamic-shared"], no-default-feature = true }
 static = { features=["static"], no-default-feature = true }
 static-mingw = { features=["static-mingw"], no-default-feature = true }
 conda  = { features=["conda"], no-default-feature = true }
@@ -16,7 +18,7 @@ conda  = { features=["conda"], no-default-feature = true }
 [feature.conda.dependencies]
 rattler-build="<0.35"
 
-[feature.dynamic.dependencies]
+[feature.dynamic-shared.dependencies]
 c-compiler = "*"
 cxx-compiler = "*"
 cmake = "==3.30.5"
@@ -36,6 +38,13 @@ occt = { version = "==7.8.1", build="*novtk*" }
 ifcopenshell = "*"
 
 [feature.dynamic.target.win-64.dependencies]
+vs2022_win-64 = "*"
+vswhere = "*"
+occt = { version = "==7.8.1", build = "*novtk*", channel = "conda-forge" }
+stepcode = { version = "==0.8.2"  }
+ifcopenshell = { version = "*" }
+
+[feature.dynamic-debug.target.win-64.dependencies]
 vs2022_win-64 = "*"
 vswhere = "*"
 occt = { version = "==7.8.1", build = "*novtk*debug*", channel = "https://repo.prefix.dev/adapy-tools" }
@@ -78,6 +87,10 @@ build = { cmd=["cmake","-G","Ninja", "--preset", "win-dynamic-release", "--fresh
 install = { cmd = ["ninja", "-C", "build/win-dynamic-release", "install"], description = "Install the project" }
 test = { cmd = ["ctest"], cwd="build/win-dynamic-release", description = "Run the tests" }
 
+[feature.dynamic-debug.target.win-64.tasks]
+build = { cmd=["cmake","-G","Ninja", "--preset", "win-dynamic-debug", "--fresh"] }
+install = { cmd = ["ninja", "-C", "build/win-dynamic-debug", "install"], description = "Install the project" }
+test = { cmd = ["ctest"], cwd="build/win-dynamic-debug", description = "Run the tests" }
 
 [feature.dynamic.target.linux-64.tasks]
 build = { cmd=["cmake","-G","Ninja", "--preset", "linux-dynamic", "--fresh"] }

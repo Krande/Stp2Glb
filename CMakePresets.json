@@ -32,8 +32,8 @@
       "hidden": false,
       "binaryDir": "${sourceDir}/build/${presetName}",
       "environment": {
-        "PREFIX": "${sourceDir}/.pixi/envs/dynamic",
-        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/dynamic/Library"
+        "PREFIX": "${sourceDir}/.pixi/envs/dynamic-debug",
+        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/dynamic-debug/Library"
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
@@ -45,6 +45,10 @@
       "hidden": false,
       "inherits": "win-shared",
       "binaryDir": "${sourceDir}/build/${presetName}",
+      "environment": {
+        "PREFIX": "${sourceDir}/.pixi/envs/dynamic",
+        "LIBRARY_PREFIX": "${sourceDir}/.pixi/envs/dynamic/Library"
+      },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "ON",

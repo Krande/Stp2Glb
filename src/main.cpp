@@ -102,8 +102,8 @@ int main(int argc, char* argv[])
 
     const auto stop = std::chrono::high_resolution_clock::now();
     const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-
-    std::cout << "STP converted in: " << duration.count() << " microseconds" << "\n";
+    const double seconds = static_cast<double>(duration.count()) / 1e6;
+    std::cout << "STP converted in: " << std::fixed << std::setprecision(2) << seconds << " seconds" << "\n";
 
     return 0;
 }

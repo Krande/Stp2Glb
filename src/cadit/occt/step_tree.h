@@ -22,6 +22,10 @@ struct ProcessResult {
     mutable int geometryIndex;
 };
 
+struct GeometryInstance {
+    int entityIndex{};
+    gp_Trsf transformation;
+};
 
 // Updated struct
 struct ProductNode {
@@ -35,7 +39,7 @@ struct ProductNode {
     std::string name;
     std::vector<std::unique_ptr<ProductNode> > children;
     int instanceIndex;
-    std::vector<int> geometryIndices;
+    std::vector<GeometryInstance> geometryInstances;
     TDF_Label targetIndex;
     gp_Trsf transformation;
     ProcessResult processResult = ProcessResult(false, "");
@@ -44,7 +48,7 @@ struct ProductNode {
     ProductNode() : instanceIndex(instanceCounter++) {}
 
     void collectNodesWithGeometry(std::vector<const ProductNode *> &result) const {
-        if (!geometryIndices.empty()) {
+        if (!geometryInstances.empty()) {
             result.push_back(this);
         }
         for (const auto &child: children) {
@@ -53,6 +57,17 @@ struct ProductNode {
     }
 };
 
+// Define a struct to hold the parent-child relationship and transformation
+struct ParentChildRelationship {
+    int parentIndex;
+    int childIndex;
+    gp_Trsf transformation;  // Transformation between parent and child
+    int nauoIndex;
+
+    ParentChildRelationship(int pIdx, int cIdx, const gp_Trsf& transform, int nauoIdx)
+        : parentIndex(pIdx), childIndex(cIdx), transformation(transform), nauoIndex(nauoIdx) {
+    }
+};
 
 std::vector<std::unique_ptr<ProductNode> > ExtractProductHierarchy(const Handle(Interface_InterfaceModel) &model,
                                                                    const Interface_Graph &theGraph);
@@ -67,10 +82,11 @@ gp_Trsf GetTransformationMatrix(
 
 static std::unique_ptr<ProductNode> BuildProductNodeWithTransform(
     int productIndex,
-    const std::unordered_map<int, std::vector<int> > &parentToChildren,
-    const Handle(Interface_InterfaceModel) &model,
-    const Interface_Graph &theGraph,
-    const gp_Trsf &parentTransform, ProductNode* parent = nullptr);
+    const std::unordered_map<int, std::vector<ParentChildRelationship>>& parentToChildrenWTransforms,
+    const Handle(Interface_InterfaceModel)& model,
+    const Interface_Graph& theGraph,
+    const gp_Trsf& parentTransform = gp_Trsf(),
+    ProductNode* parent = nullptr);
 
 static std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
     int rootIndex,
