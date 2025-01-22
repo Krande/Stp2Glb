@@ -167,7 +167,7 @@ BuildAssemblyLinks(const Handle(Interface_InterfaceModel)& model, const Interfac
 int ProductNode::instanceCounter = 0;
 // Main function: extracts top-level ProductNode trees with transformations
 std::vector<std::unique_ptr<ProductNode>> ExtractProductHierarchy(const Handle(Interface_InterfaceModel)& model,
-                                                 const Interface_Graph& theGraph)
+                                                                  const Interface_Graph& theGraph)
 {
     // 1) Build the map of parent->children relationships
     const auto parentToChildren = BuildAssemblyLinks(model, theGraph);
@@ -314,36 +314,6 @@ std::string ExportHierarchyToJson(const std::vector<std::unique_ptr<ProductNode>
     oss << "]\n";
 
     return oss.str();
-}
-
-void add_geometries_to_nodes(const std::vector<std::unique_ptr<ProductNode>>& nodes, const Interface_Graph& theGraph)
-{
-    for (auto& ref_node : nodes)
-    {
-        // 'node' is a std::unique_ptr<ProductNode>&
-        if (!ref_node) {
-            // If it's a null pointer, skip it
-            continue;
-        }
-        auto& node = *ref_node;
-        auto& product = theGraph.Entity(node.entityIndex);
-        Interface_EntityIterator breps =
-            Get_Associated_SolidModel_BiDirectional(product,
-                                                    STANDARD_TYPE(StepShape_SolidModel),
-                                                    theGraph);
-        // get the geometry indices
-        while (breps.More())
-        {
-            const auto& entity = breps.Value();
-            auto entityIndex = theGraph.Model()->Number(entity);
-            node.geometryIndices.push_back(entityIndex);
-            breps.Next();
-        }
-        if (!node.children.empty())
-        {
-            add_geometries_to_nodes(node.children, theGraph);
-        }
-    }
 }
 
 // Function to compute the transformation matrix for a given assembly instance
@@ -496,7 +466,7 @@ gp_Trsf GetAssemblyInstanceTransformation(
                 const auto& pdsRef = pdsRefs.Value();
                 if (pdsRef->IsKind(STANDARD_TYPE(StepShape_ContextDependentShapeRepresentation)))
                 {
-                    auto contextDependentShape =
+                    const auto contextDependentShape =
                         Handle(StepShape_ContextDependentShapeRepresentation)::DownCast(pdsRef);
                     auto r1 = contextDependentShape->RepresentationRelation();
                     auto r2 = contextDependentShape->RepresentedProductRelation();
@@ -514,11 +484,12 @@ gp_Trsf GetAssemblyInstanceTransformation(
     return transformation;
 }
 
-Handle(StepRepr_NextAssemblyUsageOccurrence) Get_NextAssemblyUsageOccurrence(const Handle(StepBasic_Product)& product,
-                                                                             const Interface_Graph& theGraph)
+
+std::vector<Handle(StepRepr_NextAssemblyUsageOccurrence)> Get_NextAssemblyUsageOccurrences(
+    const Handle(StepBasic_Product)& product,
+    const Interface_Graph& theGraph)
 {
-    Handle(StepRepr_NextAssemblyUsageOccurrence) nauo;
-    std::vector<Standard_Integer> nauos;
+    std::vector<Handle(StepRepr_NextAssemblyUsageOccurrence)> nauos;
 
     Interface_EntityIterator childIter = theGraph.Sharings(product);
     for (childIter.Start(); childIter.More(); childIter.Next())
@@ -537,16 +508,79 @@ Handle(StepRepr_NextAssemblyUsageOccurrence) Get_NextAssemblyUsageOccurrence(con
                     {
                         if (pdIter.Value()->IsKind(STANDARD_TYPE(StepRepr_NextAssemblyUsageOccurrence)))
                         {
-                            nauo = Handle(StepRepr_NextAssemblyUsageOccurrence)::DownCast(pdIter.Value());
-                            nauos.push_back(theGraph.EntityNumber(nauo));
+                            nauos.push_back(Handle(StepRepr_NextAssemblyUsageOccurrence)::DownCast(pdIter.Value()));
                         }
                     }
                 }
             }
         }
     }
+    return nauos;
+}
 
-    return nauo;
+Handle(StepRepr_NextAssemblyUsageOccurrence) Get_NextAssemblyUsageOccurrence(const Handle(StepBasic_Product)& product,
+                                                                             const Interface_Graph& theGraph)
+{
+    auto result = Get_NextAssemblyUsageOccurrences(product, theGraph);
+    if (result.size() == 1)
+    {
+        return result[0];
+    }
+    // return last element
+    return result[result.size() - 1];
+}
+
+
+void add_geometries_to_nodes(const std::vector<std::unique_ptr<ProductNode>>& nodes, const Interface_Graph& theGraph)
+{
+    for (auto& ref_node : nodes)
+    {
+        // 'node' is a std::unique_ptr<ProductNode>&
+        if (!ref_node)
+        {
+            // If it's a null pointer, skip it
+            continue;
+        }
+        auto& node = *ref_node;
+        auto& product = theGraph.Entity(node.entityIndex);
+        Interface_EntityIterator breps =
+            Get_Associated_SolidModel_BiDirectional(product,
+                                                    STANDARD_TYPE(StepShape_SolidModel),
+                                                    theGraph);
+        // get the geometry indices
+        while (breps.More())
+        {
+            const auto& entity = breps.Value();
+            auto entityIndex = theGraph.Model()->Number(entity);
+            node.geometryIndices.push_back(entityIndex);
+            breps.Next();
+        }
+
+        if (!node.geometryIndices.size())
+        {
+            Handle(StepBasic_Product) prod = Handle(StepBasic_Product)::DownCast(theGraph.Entity(node.entityIndex));
+            auto nauos = Get_NextAssemblyUsageOccurrences(prod, theGraph);
+            std::vector<gp_Trsf> transformations;
+            for (const auto& nauo : nauos)
+            {
+                auto related_prod = nauo->RelatedProductDefinition();
+                auto relating_prod = nauo->RelatingProductDefinition();
+            }
+
+            if (nauos.size() == 1)
+            {
+                node.transformation = GetAssemblyInstanceTransformation(nauos[0], theGraph);
+            }
+            else if (nauos.size() > 1)
+            {
+                node.transformation = GetAssemblyInstanceTransformation(nauos[0], theGraph);
+            }
+        }
+        if (!node.children.empty())
+        {
+            add_geometries_to_nodes(node.children, theGraph);
+        }
+    }
 }
 
 // Recursive function that builds a ProductNode tree with transformations
@@ -594,7 +628,8 @@ static std::unique_ptr<ProductNode> BuildProductNodeWithTransform(
         for (int childIdx : it->second)
         {
             node->children.push_back(
-                BuildProductNodeWithTransform(childIdx, parentToChildren, model, theGraph, absoluteTransform, node.get()));
+                BuildProductNodeWithTransform(childIdx, parentToChildren, model, theGraph, absoluteTransform,
+                                              node.get()));
         }
     }
 
@@ -609,28 +644,30 @@ std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
     const Interface_Graph& theGraph,
     const gp_Trsf& rootTransform)
 {
-     // Create the root node
+    // Create the root node
     auto rootNode = std::make_unique<ProductNode>();
     rootNode->parent = nullptr;
     rootNode->entityIndex = rootIndex;
     // We'll fill in transform/name/etc. below
 
     // A stack item for our DFS
-    struct StackItem {
-        ProductNode* node;   // pointer to the node in which we'll store data
-        int productIndex;    // which product index this node corresponds to
-        gp_Trsf parentTrsf;  // the parent's final transform to be combined with local transform
+    struct StackItem
+    {
+        ProductNode* node; // pointer to the node in which we'll store data
+        int productIndex; // which product index this node corresponds to
+        gp_Trsf parentTrsf; // the parent's final transform to be combined with local transform
     };
 
     std::stack<StackItem> stack;
-    stack.push({ rootNode.get(), rootIndex, rootTransform });
+    stack.push({rootNode.get(), rootIndex, rootTransform});
 
     // A set to track visited product indices
     // to avoid infinite loops if there's a cycle
     std::unordered_set<int> visited;
     visited.insert(rootIndex);
 
-    while (!stack.empty()) {
+    while (!stack.empty())
+    {
         auto [nodePtr, productIdx, accumulatedTrsf] = stack.top();
         stack.pop();
 
@@ -639,7 +676,8 @@ std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
         // If productIdx is invalid (e.g. out of range for the model),
         // we skip filling data and proceed.  Depending on your data,
         // you might want to throw an exception instead.
-        if (productIdx < 1 || productIdx > model->NbEntities()) {
+        if (productIdx < 1 || productIdx > model->NbEntities())
+        {
             // Mark something or skip
             nodePtr->name = "(invalid index)";
             // nodePtr->instanceIndex = -1;
@@ -648,13 +686,15 @@ std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
 
         // --- 2) Look up the product from the model ---
         Handle(Standard_Transient) ent = model->Value(productIdx);
-        if (ent.IsNull()) {
+        if (ent.IsNull())
+        {
             nodePtr->name = "(model->Value() returned null)";
             // nodePtr->instanceIndex = -1;
             continue;
         }
         auto product = Handle(StepBasic_Product)::DownCast(ent);
-        if (product.IsNull()) {
+        if (product.IsNull())
+        {
             nodePtr->name = "(not a StepBasic_Product)";
             // nodePtr->instanceIndex = -1;
             continue;
@@ -662,7 +702,8 @@ std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
 
         // --- 3) Compute local transform and combine with parent's ---
         auto nauo = Get_NextAssemblyUsageOccurrence(product, theGraph);
-        if (!nauo.IsNull()) {
+        if (!nauo.IsNull())
+        {
             gp_Trsf localTransform = GetAssemblyInstanceTransformation(nauo, theGraph);
 
             gp_Trsf finalTransform = accumulatedTrsf;
@@ -671,25 +712,33 @@ std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
 
             // Instance index from the graph
             nodePtr->instanceIndex = theGraph.Model()->Number(nauo);
-        } else {
+        }
+        else
+        {
             // If NAUO is invalid for some reason
             nodePtr->transformation = accumulatedTrsf;
             // nodePtr->instanceIndex = -1;
         }
 
         // --- 4) Fill the node's name ---
-        if (!product->Name().IsNull()) {
+        if (!product->Name().IsNull())
+        {
             nodePtr->name = product->Name()->ToCString();
-        } else {
+        }
+        else
+        {
             nodePtr->name = "(unnamed product)";
         }
 
         // --- 5) Create child nodes and push them onto the stack ---
         auto it = parentToChildren.find(productIdx);
-        if (it != parentToChildren.end()) {
-            for (int childIdx : it->second) {
+        if (it != parentToChildren.end())
+        {
+            for (int childIdx : it->second)
+            {
                 // If we've already seen this index, skip to avoid cycles
-                if (!visited.insert(childIdx).second) {
+                if (!visited.insert(childIdx).second)
+                {
                     continue;
                 }
 
@@ -701,7 +750,7 @@ std::unique_ptr<ProductNode> BuildProductNodeWithTransformIterative(
 
                 // We'll fill all the child details once we pop from the stack
                 // For now, just push onto the stack
-                stack.push({ childRef.get(), childIdx, nodePtr->transformation });
+                stack.push({childRef.get(), childIdx, nodePtr->transformation});
             }
         }
     }
